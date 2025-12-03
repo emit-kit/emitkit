@@ -32,7 +32,7 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		return new Response(
 			JSON.stringify({
 				error: 'Not Found',
-				message: 'Invalid API endpoint. Only /v1/* paths are supported.'
+				message: 'Invalid API endpoint.'
 			}),
 			{
 				status: 404,
@@ -41,8 +41,6 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		);
 	}
 
-	// For api subdomain, we need to create routes at /v1/* that mirror /api/v1/*
-	// Let's just pass through to resolve and handle routing in routes
 	return resolve(event);
 };
 
