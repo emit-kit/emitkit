@@ -2,14 +2,14 @@
 	"$schema": "https://openapi.vercel.sh/vercel.json",
 	"rewrites": [
 		{
-			"source": "/:path*",
+			"source": "/:path(.*)",
 			"has": [
 				{
 					"type": "host",
 					"value": "api.emitkit.com"
 				}
 			],
-			"destination": "/api/:path*"
+			"destination": "/api/:path"
 		}
 	]
 }
