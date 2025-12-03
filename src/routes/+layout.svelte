@@ -41,7 +41,7 @@
 <Toaster />
 
 <!-- PWA Install prompt -->
-<PwaInstall useLocalStorage={true} />
+<PwaInstall manifestUrl="/manifest.webmanifest" useLocalStorage={true} />
 
 <AuthUIProvider {authClient} credentials={true} emailOTP={true} {toast}>
 	<ModalStackProvider>
