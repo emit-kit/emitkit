@@ -102,7 +102,6 @@ export async function withAuth(
 	 */
 	operation.step('Verifying API key');
 	const response = await auth.api.verifyApiKey({
-		request: event.request,
 		body: {
 			key: token.trim()
 		}
