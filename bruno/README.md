@@ -42,7 +42,7 @@ Use these URLs with tools like:
    - Set the `api_key` secret variable:
      - Click the environment dropdown
      - Click "Configure"
-     - Enter your API key (format: `blip_xxxxxxxxxxxxxxxxxxxxx`)
+     - Enter your API key (format: `emitkit_xxxxxxxxxxxxxxxxxxxxx`)
 
 ## Environments
 
@@ -177,7 +177,7 @@ Content-Type: application/json
 
 ```bash
 curl -X POST https://your-domain.com/api/v1/events \
-  -H "Authorization: Bearer blip_xxxxxxxxxxxxxxxxxxxxx" \
+  -H "Authorization: Bearer emitkit_xxxxxxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
     "channelName": "payments",
@@ -261,7 +261,7 @@ curl -X POST https://your-domain.com/api/v1/events \
 All requests must include a valid API key in the `Authorization` header:
 
 ```
-Authorization: Bearer blip_xxxxxxxxxxxxxxxxxxxxx
+Authorization: Bearer emitkit_xxxxxxxxxxxxxxxxxxxxx
 ```
 
 The API key automatically scopes requests to:
@@ -301,7 +301,7 @@ To prevent duplicate events from retries or webhook replays, include an `Idempot
 
 ```bash
 curl -X POST https://api.emitkit.com/v1/events \
-  -H "Authorization: Bearer blip_xxxxx" \
+  -H "Authorization: Bearer emitkit_xxxxx" \
   -H "Idempotency-Key: payment-123-retry-1" \
   -H "Content-Type: application/json" \
   -d '{"channelName": "payments", "title": "Payment Received"}'

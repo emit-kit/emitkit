@@ -124,10 +124,10 @@ export const auth = betterAuth({
 			defaultKeyLength: 16,
 			startingCharactersConfig: {
 				shouldStore: true,
-				charactersLength: 4
+				charactersLength: 7
 			},
 			enableMetadata: true,
-			defaultPrefix: 'blip_',
+			defaultPrefix: 'emitkit_',
 			rateLimit: {
 				enabled: true,
 				timeWindow: 1000 * 60, // 1 minute

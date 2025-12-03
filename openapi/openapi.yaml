@@ -9,7 +9,7 @@ info:
 
     All API requests require authentication using an API key in the Authorization header:
     ```
-    Authorization: Bearer blip_xxxxxxxxxxxxxxxxxxxxx
+    Authorization: Bearer emitkit_xxxxxxxxxxxxxxxxxxxxx
     ```
 
     API keys are scoped to organizations and sites. Create API keys in your dashboard.
@@ -306,7 +306,7 @@ components:
       scheme: bearer
       bearerFormat: API Key
       description: |
-        API key authentication. Format: `blip_xxxxxxxxxxxxxxxxxxxxx`
+        API key authentication. Format: `emitkit_xxxxxxxxxxxxxxxxxxxxx`
 
         Create API keys in your EmitKit dashboard. Keys are scoped to a specific
         organization and site.
