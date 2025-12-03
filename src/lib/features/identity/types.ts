@@ -1,6 +1,6 @@
 export type {
-	UserIdentity,
-	UserIdentityInsert,
-	UserAlias,
-	UserAliasInsert
-} from '$lib/server/db/schema';
+	TinybirdUserIdentity,
+	UserIdentityData,
+	UserIdentityResponse,
+	ResolvedUser
+} from '$lib/features/identity/server/tinybird.service';

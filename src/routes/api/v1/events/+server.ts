@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { createContextLogger } from '$lib/server/logger';
 import { redis } from '$lib/server/redis';
 import { waitUntil } from '$lib/server/wait-until';
-import { resolveUserId } from '$lib/features/identity/server/user-identity.repository';
+import { resolveUserAlias } from '$lib/features/identity/server/tinybird.service';
 
 const jsonValueSchema: z.ZodType<
 	string | number | boolean | null | Array<unknown> | Record<string, unknown>
@@ -81,7 +81,7 @@ export const POST: RequestHandler = async (event) => {
 			// Resolve userId if provided (supports both direct userId and aliases)
 			let resolvedUserId = validatedData.userId;
 			if (validatedData.userId) {
-				const resolved = await resolveUserId(validatedData.userId, orgId);
+				const resolved = await resolveUserAlias(orgId, validatedData.userId);
 				if (resolved) {
 					resolvedUserId = resolved;
 					logger.info('Resolved userId from alias', {

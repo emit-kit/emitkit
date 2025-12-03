@@ -8,7 +8,6 @@ export * from './subscription';
 export * from './site';
 
 export * from './channel';
-export * from './user-identity';
 export * from './webhook';
 export * from './push-subscription';
 export * from './funnel';

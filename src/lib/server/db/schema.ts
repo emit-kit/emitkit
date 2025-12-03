@@ -4,7 +4,6 @@ export * from './schema/subscription';
 export * from './schema/site';
 export * from './schema/utils';
 export * from './schema/channel';
-export * from './schema/user-identity';
 export * from './schema/webhook';
 export * from './schema/push-subscription';
 export * from './schema/funnel';

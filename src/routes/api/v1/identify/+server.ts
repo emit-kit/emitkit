@@ -3,8 +3,7 @@ import type { RequestHandler } from './$types';
 import { withAuth } from '$lib/features/api/server/middleware';
 import { z } from 'zod';
 import { createContextLogger } from '$lib/server/logger';
-import { upsertIdentity } from '$lib/features/identity/server/user-identity.repository';
-import { createAlias } from '$lib/features/identity/server/user-alias.repository';
+import { upsertUserIdentity } from '$lib/features/identity/server/tinybird.service';
 import { identifyUserSchema } from '$lib/features/identity/validators';
 import { analytics } from '$lib/features/analytics/server';
 import { waitUntil } from '$lib/server/wait-until';
@@ -25,54 +24,22 @@ export const POST: RequestHandler = async (event) => {
 
 			operation.step('Upserting user identity', {
 				userId: validatedData.user_id,
-				hasProperties: Object.keys(validatedData.properties || {}).length > 0
+				hasProperties: Object.keys(validatedData.properties || {}).length > 0,
+				aliasCount: validatedData.aliases?.length || 0
 			});
 
-			// Upsert the user identity with properties
-			const identity = await upsertIdentity({
+			// Upsert the user identity with properties and aliases in Tinybird
+			const identity = await upsertUserIdentity({
 				organizationId: orgId,
 				userId: validatedData.user_id,
-				properties: validatedData.properties || {}
+				properties: validatedData.properties || {},
+				aliases: validatedData.aliases || []
 			});
-
-			// Create aliases if provided
-			const createdAliases: string[] = [];
-			const failedAliases: Array<{ alias: string; reason: string }> = [];
-
-			if (validatedData.aliases && validatedData.aliases.length > 0) {
-				operation.step('Creating aliases', {
-					aliasCount: validatedData.aliases.length
-				});
-
-				for (const alias of validatedData.aliases) {
-					try {
-						await createAlias({
-							organizationId: orgId,
-							userId: validatedData.user_id,
-							alias
-						});
-						createdAliases.push(alias);
-					} catch (error) {
-						// Handle duplicate aliases gracefully
-						const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-						logger.warn('Failed to create alias', {
-							alias,
-							userId: validatedData.user_id,
-							error: errorMessage
-						});
-						failedAliases.push({
-							alias,
-							reason: errorMessage.includes('duplicate') ? 'Alias already exists' : errorMessage
-						});
-					}
-				}
-			}
 
 			operation.end({
 				userId: validatedData.user_id,
 				identityId: identity.id,
-				aliasCount: createdAliases.length,
-				failedAliasCount: failedAliases.length
+				aliasCount: identity.aliases.length
 			});
 
 			// Track successful identify event
@@ -82,7 +49,7 @@ export const POST: RequestHandler = async (event) => {
 						organizationId: orgId,
 						apiKeyId,
 						userId: validatedData.user_id,
-						aliasCount: createdAliases.length,
+						aliasCount: identity.aliases.length,
 						hasProperties: Object.keys(validatedData.properties || {}).length > 0
 					})
 					.then(() => analytics.shutdown())
@@ -95,10 +62,9 @@ export const POST: RequestHandler = async (event) => {
 					userId: identity.userId,
 					properties: identity.properties,
 					aliases: {
-						created: createdAliases,
-						failed: failedAliases.length > 0 ? failedAliases : undefined
+						created: identity.aliases
 					},
-					updatedAt: identity.updatedAt.toISOString()
+					updatedAt: identity.updatedAt
 				},
 				requestId: event.locals.requestId
 			};
