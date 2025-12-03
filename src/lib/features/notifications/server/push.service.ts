@@ -1,7 +1,7 @@
 import webpush from 'web-push';
 import { db } from '$lib/server/db';
 import { pushSubscription as pushSubscriptionTable } from '$lib/server/db/schema';
-import { eq, sql, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createLogger } from '$lib/server/logger';
 import { PUBLIC_VAPID_KEY } from '$env/static/public';
 import { VAPID_KEY, VAPID_SUBJECT } from '$env/static/private';
@@ -181,22 +181,19 @@ export async function sendPushNotificationToChannels(
 		payloadTitle: payload.title
 	});
 
-	// Get subscriptions that include any of the target channels (filtered at DB level)
-	// Empty channelIds array means "subscribe to all channels"
-	// We use sql.placeholder to safely pass the array
-	const subscriptions = await db
-		.select()
-		.from(pushSubscriptionTable)
-		.where(
-			or(
-				sql`jsonb_array_length(${pushSubscriptionTable.channelIds}) = 0`,
-				sql`EXISTS (
-					SELECT 1
-					FROM jsonb_array_elements_text(${pushSubscriptionTable.channelIds}) as channel_id
-					WHERE channel_id = ANY(${channelIds}::text[])
-				)`
-			)
-		);
+	// Get all subscriptions, then filter in-memory
+	// This is simpler and avoids complex SQL array handling issues
+	const allSubscriptions = await db.select().from(pushSubscriptionTable);
+
+	// Filter subscriptions that match the target channels
+	const subscriptions = allSubscriptions.filter((sub) => {
+		// Empty channelIds means "subscribe to all channels"
+		if (!sub.channelIds || sub.channelIds.length === 0) {
+			return true;
+		}
+		// Check if any of the target channels are in the subscription
+		return channelIds.some((channelId) => sub.channelIds.includes(channelId));
+	});
 
 	logger.info('Found push subscriptions', {
 		subscriptionCount: subscriptions.length,
