@@ -2,29 +2,16 @@ meta {
   name: Create Event - Minimal
   type: http
   seq: 4
-  tags: [
-    events
-    v1
-    minimal
-  ]
 }
 
 post {
   url: {{api_url}}/events
   body: json
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{api_key}}
-}
-
-headers {
-  content-type: application/json
+  auth: inherit
 }
 
 body:json {
-  {
+   {
     "channelName": "system-logs",
     "title": "System Check Completed"
   }

@@ -33,7 +33,33 @@ export const auth = betterAuth({
 	}),
 	emailAndPassword: {
 		enabled: true,
-		sendResetPassword(data, request) {}
+		async sendResetPassword({ user, url }) {
+			const operation = logger.start('Send reset password email', {
+				email: user.email
+			});
+
+			try {
+				const { emailService, ResetPasswordEmail } = await import(
+					'$lib/features/email/server/index.js'
+				);
+
+				await emailService.sendEmail({
+					to: user.email,
+					subject: `Reset your password for ${siteConfig.appName}`,
+					component: ResetPasswordEmail,
+					props: {
+						resetPasswordURL: url
+					}
+				});
+
+				operation.end({ sent: true });
+			} catch (error) {
+				operation.error('Failed to send reset password email', error, {
+					email: user.email
+				});
+				// Don't throw - we don't want to break auth flow
+			}
+		}
 	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url }) => {

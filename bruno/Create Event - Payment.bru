@@ -2,29 +2,16 @@ meta {
   name: Create Event - Payment Example
   type: http
   seq: 3
-  tags: [
-    events
-    v1
-    payment
-  ]
 }
 
 post {
   url: {{api_url}}/events
   body: json
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{api_key}}
-}
-
-headers {
-  content-type: application/json
+  auth: inherit
 }
 
 body:json {
-  {
+   {
     "channelName": "payments",
     "title": "Payment Received",
     "description": "User upgraded to Pro plan",

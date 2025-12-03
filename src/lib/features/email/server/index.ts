@@ -27,3 +27,5 @@ export { bentoClient };
 
 export { default as MagicLoginLink } from '../components/magic-login-link.svelte';
 export { default as WelcomeEmail } from '../components/welcome-email.svelte';
+export { default as ResetPasswordEmail } from '../components/reset-password-email.svelte';
+export { default as ConfirmSubscriptionEmail } from '../components/confirm-subscription-email.svelte';

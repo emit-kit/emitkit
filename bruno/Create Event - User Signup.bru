@@ -2,29 +2,16 @@ meta {
   name: Create Event - User Signup
   type: http
   seq: 5
-  tags: [
-    events
-    v1
-    signup
-  ]
 }
 
 post {
   url: {{api_url}}/events
   body: json
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{api_key}}
-}
-
-headers {
-  content-type: application/json
+  auth: inherit
 }
 
 body:json {
-  {
+   {
     "channelName": "user-signups",
     "title": "New User Registered",
     "description": "A new user has signed up for your application",
