@@ -1,14 +1,5 @@
 <script lang="ts">
-	import {
-		Html,
-		Head,
-		Body,
-		Preview,
-		Container,
-		Section,
-		Text,
-		Button
-	} from 'better-svelte-email';
+	import { Html, Head, Body, Preview, Container, Section, Text, Button } from 'better-svelte-email';
 	import { emailConfig } from './email.config';
 
 	interface Props {

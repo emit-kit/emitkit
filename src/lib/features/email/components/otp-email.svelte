@@ -55,7 +55,8 @@
 			</Section>
 			<Text class="mx-0 my-7 p-0 text-lg font-bold text-black">{titles[type]}</Text>
 			<Text class="text-sm leading-6 text-black">
-				{descriptions[type]} {emailConfig.appName}.
+				{descriptions[type]}
+				{emailConfig.appName}.
 			</Text>
 
 			{#if isMobile}
@@ -63,9 +64,7 @@
 				<Section
 					class="my-6 rounded-lg border border-solid border-blue-200 bg-blue-50 px-6 py-5 text-center"
 				>
-					<Text class="mb-2 text-sm font-semibold text-blue-900">
-						📱 On mobile? Quick access:
-					</Text>
+					<Text class="mb-2 text-sm font-semibold text-blue-900">📱 On mobile? Quick access:</Text>
 					<Text class="mb-4 text-sm leading-6 text-blue-800">
 						Tap the button below to open {emailConfig.appName} and paste your code:
 					</Text>

@@ -79,7 +79,10 @@ export const POST: RequestHandler = async (event) => {
 			});
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			const userId = error instanceof z.ZodError ? undefined : (await event.request.json().catch(() => ({}))).user_id;
+			const userId =
+				error instanceof z.ZodError
+					? undefined
+					: (await event.request.json().catch(() => ({}))).user_id;
 
 			operation.error('Failed to identify user', error instanceof Error ? error : undefined, {
 				organizationId: orgId,

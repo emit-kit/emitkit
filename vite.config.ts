@@ -9,9 +9,7 @@ export default defineConfig({
 		// Expose Vercel deployment ID for cache busting
 		// Uses commit SHA in production, timestamp in development
 		__DEPLOYMENT_ID__: JSON.stringify(
-			process.env.VERCEL_GIT_COMMIT_SHA ||
-			process.env.VERCEL_DEPLOYMENT_ID ||
-			`dev-${Date.now()}`
+			process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || `dev-${Date.now()}`
 		)
 	},
 	test: {

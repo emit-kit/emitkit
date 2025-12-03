@@ -27,7 +27,12 @@ export type RateLimitInfo = {
 
 export async function withAuth(
 	event: RequestEvent<Record<string, string>>,
-	handler: (orgId: string, siteId: string, apiKeyId: string, rateLimitInfo: RateLimitInfo) => Promise<Response>
+	handler: (
+		orgId: string,
+		siteId: string,
+		apiKeyId: string,
+		rateLimitInfo: RateLimitInfo
+	) => Promise<Response>
 ): Promise<Response> {
 	const logger = createContextLogger('api-middleware');
 	const operation = logger.start('Authenticate API request', {

@@ -6,8 +6,9 @@ const getAppUrl = () => {
 
 	// Priority: APP_DOMAIN > VERCEL_PROJECT_PRODUCTION_URL (in prod) > VERCEL_URL
 	const isProductionEnv = env.VERCEL_TARGET_ENV === 'production';
-	const domain = env.APP_DOMAIN
-		?? (isProductionEnv && env.VERCEL_PROJECT_PRODUCTION_URL
+	const domain =
+		env.APP_DOMAIN ??
+		(isProductionEnv && env.VERCEL_PROJECT_PRODUCTION_URL
 			? env.VERCEL_PROJECT_PRODUCTION_URL
 			: env.VERCEL_URL);
 

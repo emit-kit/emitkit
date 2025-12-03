@@ -129,14 +129,16 @@ export const POST: RequestHandler = async (event) => {
 
 				// Cache for 24 hours
 				waitUntil(
-					redis
-						.set(cacheKey, cacheValue, { ex: 86400 })
-						.catch((error) =>
-							logger.error('Failed to cache idempotent response', error instanceof Error ? error : undefined, {
+					redis.set(cacheKey, cacheValue, { ex: 86400 }).catch((error) =>
+						logger.error(
+							'Failed to cache idempotent response',
+							error instanceof Error ? error : undefined,
+							{
 								idempotencyKey,
 								organizationId: orgId
-							})
+							}
 						)
+					)
 				);
 			}
 

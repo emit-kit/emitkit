@@ -11,6 +11,7 @@ The complete API specification is available in OpenAPI 3.1 format:
 - **Source File**: [`../openapi/openapi.yaml`](../openapi/openapi.yaml)
 
 Use these URLs with tools like:
+
 - **Mintlify** (Auto-import for documentation)
 - **Postman** (Import → Link)
 - **Insomnia** (Import → URL)

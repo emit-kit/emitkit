@@ -41,9 +41,7 @@ export interface ResolvedUser {
  * Upsert a user identity in Tinybird
  * Uses ReplacingMergeTree to handle updates based on updated_at version
  */
-export async function upsertUserIdentity(
-	data: UserIdentityData
-): Promise<UserIdentityResponse> {
+export async function upsertUserIdentity(data: UserIdentityData): Promise<UserIdentityResponse> {
 	const now = new Date().toISOString();
 	const properties = data.properties || {};
 	const aliases = data.aliases || [];

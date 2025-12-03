@@ -273,7 +273,12 @@ const guardHandler: Handle = async ({ event, resolve }) => {
  * 3. betterAuthHandler - Sets up session and organization context
  * 4. guardHandler - Enforces authentication requirements
  */
-export const handle = sequence(requestIdHandler, apiSubdomainHandler, betterAuthHandler, guardHandler);
+export const handle = sequence(
+	requestIdHandler,
+	apiSubdomainHandler,
+	betterAuthHandler,
+	guardHandler
+);
 
 // ============================================================================
 // Reroute Hook

@@ -44,9 +44,13 @@ export async function withCache<T>(
 				// Delete the corrupted cache entry (non-blocking with waitUntil)
 				waitUntil(
 					redis.del(cacheKey).catch((delError) => {
-						logger.error('Failed to delete corrupted cache', delError instanceof Error ? delError : undefined, {
-							key: cacheKey
-						});
+						logger.error(
+							'Failed to delete corrupted cache',
+							delError instanceof Error ? delError : undefined,
+							{
+								key: cacheKey
+							}
+						);
 					})
 				);
 			}
@@ -76,10 +80,14 @@ export async function withCache<T>(
 			})
 		);
 	} catch (serializeError) {
-		logger.error('Failed to serialize data for cache', serializeError instanceof Error ? serializeError : undefined, {
-			key: cacheKey,
-			dataType: typeof data
-		});
+		logger.error(
+			'Failed to serialize data for cache',
+			serializeError instanceof Error ? serializeError : undefined,
+			{
+				key: cacheKey,
+				dataType: typeof data
+			}
+		);
 	}
 
 	return data;

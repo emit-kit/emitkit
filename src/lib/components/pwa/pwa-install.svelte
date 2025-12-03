@@ -90,12 +90,9 @@
 				console.log('📲 PWA installation available');
 			});
 
-			pwaInstallElement.addEventListener(
-				'pwa-user-choice-result-event',
-				(event: CustomEvent) => {
-					console.log('👤 User choice result:', event.detail.message);
-				}
-			);
+			pwaInstallElement.addEventListener('pwa-user-choice-result-event', (event: CustomEvent) => {
+				console.log('👤 User choice result:', event.detail.message);
+			});
 		}
 	});
 
