@@ -247,8 +247,13 @@ export const auth = betterAuth({
 			...(env.VERCEL_BRANCH_URL ? [env.VERCEL_BRANCH_URL] : [])
 		].filter((url): url is string => Boolean(url));
 
+		console.log('Trusted origins base URLs:', baseUrls);
+
+		// Determine protocol based on environment
+		const protocol = import.meta.env.PROD ? 'https://' : 'http://';
+
 		// Generate origins with and without trailing slash
-		const origins = baseUrls.flatMap((url) => [`https://${url}`, `https://${url}/`]);
+		const origins = baseUrls.flatMap((url) => [`${protocol}${url}`, `${protocol}${url}/`]);
 
 		return origins;
 	}
