@@ -1,7 +1,7 @@
 import webpush from 'web-push';
 import { db } from '$lib/server/db';
 import { pushSubscription as pushSubscriptionTable } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, or } from 'drizzle-orm';
 import { createLogger } from '$lib/server/logger';
 import { PUBLIC_VAPID_KEY } from '$env/static/public';
 import { VAPID_KEY, VAPID_SUBJECT } from '$env/static/private';
@@ -183,18 +183,19 @@ export async function sendPushNotificationToChannels(
 
 	// Get subscriptions that include any of the target channels (filtered at DB level)
 	// Empty channelIds array means "subscribe to all channels"
+	// We use sql.placeholder to safely pass the array
 	const subscriptions = await db
 		.select()
 		.from(pushSubscriptionTable)
 		.where(
-			sql`(
-				jsonb_array_length(${pushSubscriptionTable.channelIds}) = 0
-				OR EXISTS (
+			or(
+				sql`jsonb_array_length(${pushSubscriptionTable.channelIds}) = 0`,
+				sql`EXISTS (
 					SELECT 1
 					FROM jsonb_array_elements_text(${pushSubscriptionTable.channelIds}) as channel_id
-					WHERE channel_id = ANY(${channelIds})
-				)
-			)`
+					WHERE channel_id = ANY(${channelIds}::text[])
+				)`
+			)
 		);
 
 	logger.info('Found push subscriptions', {
