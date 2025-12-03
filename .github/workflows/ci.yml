@@ -24,7 +24,16 @@ env:
   DATABASE_URL: 'postgresql://testuser:testpassword@localhost:5432/jobboard_test'
   BETTER_AUTH_SECRET: 'test-secret-key-for-ci-minimum-32-chars-required'
   PAYMENT_ADAPTER: 'test'
-  # Add any other required env vars for your payment/API providers here
+  # Mock environment variables for type checking
+  VERCEL_URL: 'http://localhost:5173'
+  PUBLIC_VAPID_KEY: 'mock-vapid-public-key'
+  VAPID_KEY: 'mock-vapid-private-key'
+  VAPID_SUBJECT: 'mailto:test@example.com'
+  OPENROUTER_API_KEY: 'mock-openrouter-key'
+  TINYBIRD_TOKEN: 'mock-tinybird-token'
+  TINYBIRD_API_URL: 'https://api.tinybird.co'
+  UPSTASH_REDIS_REST_TOKEN: 'mock-redis-token'
+  UPSTASH_REDIS_REST_URL: 'https://mock-redis.upstash.io'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
