@@ -115,7 +115,7 @@
 											<Sidebar.MenuSubItem>
 												<Sidebar.MenuSubButton>
 													{#snippet child({ props })}
-														<a href="/{site.id}/{channel.id}" {...props}>
+														<a href="/events/{site.id}/{channel.id}" {...props}>
 															<HashIcon />
 															<span>{channel.name}</span>
 														</a>

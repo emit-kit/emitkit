@@ -153,7 +153,7 @@
 		// Record when the component mounted
 		mountTime = Date.now();
 
-		const eventSource = new EventSource(`/${params.site_id}/${params.channel_id}/stream`);
+		const eventSource = new EventSource(`/events/${params.site_id}/${params.channel_id}/stream`);
 
 		eventSource.addEventListener('message', async (e) => {
 			const message = JSON.parse(e.data);

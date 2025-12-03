@@ -8,10 +8,10 @@ import { createContextLogger } from '$lib/server/logger';
 
 /**
  * API Subdomain Handler
- * Handles requests from api.emitkit.com and rewrites them to /api/* routes
+ * Validates and routes requests from api.emitkit.com
+ * The actual route must exist at /api/v1/* for this to work
  */
 const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
-	const logger = createContextLogger('api-subdomain-handler');
 	const host = event.request.headers.get('host');
 
 	// Only process requests from api.emitkit.com
@@ -19,16 +19,8 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
+	const logger = createContextLogger('api-subdomain-handler');
 	const originalPath = event.url.pathname;
-
-	logger.info('API subdomain request received', {
-		host,
-		originalPath,
-		startsWithV1: originalPath.startsWith('/v1/'),
-		pathLength: originalPath.length,
-		firstChar: originalPath[0],
-		secondChar: originalPath[1]
-	});
 
 	// Only allow /v1/* paths on the API subdomain
 	if (!originalPath.startsWith('/v1/')) {
@@ -40,7 +32,7 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		return new Response(
 			JSON.stringify({
 				error: 'Not Found',
-				message: `Invalid API endpoint. Only /v1/* paths are supported. Received: ${originalPath}`
+				message: 'Invalid API endpoint. Only /v1/* paths are supported.'
 			}),
 			{
 				status: 404,
@@ -49,19 +41,8 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		);
 	}
 
-	// Rewrite /v1/* to /api/v1/*
-	const rewrittenPath = `/api${originalPath}`;
-
-	logger.info('Rewriting API subdomain request', {
-		host,
-		originalPath,
-		rewrittenPath
-	});
-
-	// Modify the event's URL to the rewritten path
-	event.url.pathname = rewrittenPath;
-
-	// Continue processing with the rewritten path
+	// For api subdomain, we need to create routes at /v1/* that mirror /api/v1/*
+	// Let's just pass through to resolve and handle routing in routes
 	return resolve(event);
 };
 
