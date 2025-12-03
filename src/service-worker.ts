@@ -70,8 +70,11 @@ sw.addEventListener('activate', (event) => {
 });
 
 /**
- * Fetch event - serve from cache, fallback to network
- * Strategy: NetworkFirst for API calls, CacheFirst for static assets
+ * Fetch event - cache only static assets
+ * Strategy: CacheFirst for static assets, NetworkOnly for everything else
+ *
+ * Static assets only (JS, CSS, images, fonts) - these are cached
+ * API routes, pages, streams - ALWAYS fetch fresh from network
  */
 sw.addEventListener('fetch', (event) => {
 	if (event.request.method !== 'GET') return;
@@ -81,62 +84,23 @@ sw.addEventListener('fetch', (event) => {
 	// Skip cross-origin requests
 	if (url.origin !== location.origin) return;
 
-	// Never cache auth-related pages - they need fresh session data
-	const isAuthPage =
-		url.pathname.startsWith('/auth/') || url.pathname.includes('pwa-callback');
+	// Only cache static assets from the build
+	// Everything else (API routes, pages, streams) hits the network
+	const isStaticAsset = ASSETS.includes(url.pathname);
 
-	if (isAuthPage) {
-		event.respondWith(fetch(event.request));
+	if (!isStaticAsset) {
+		// NetworkOnly: API routes, pages, streams always fetch fresh
 		return;
 	}
 
-	// API routes: NetworkFirst (prioritize fresh data)
-	if (url.pathname.startsWith('/api/')) {
-		// NEVER cache authentication endpoints - they must always be fresh
-		const isAuthEndpoint =
-			url.pathname.startsWith('/api/auth/') ||
-			url.pathname.includes('magic-link') ||
-			url.pathname.includes('session') ||
-			url.pathname.includes('sign-in') ||
-			url.pathname.includes('sign-up');
-
-		if (isAuthEndpoint) {
-			// Bypass cache entirely for auth endpoints
-			event.respondWith(fetch(event.request));
-			return;
-		}
-
-		// For other API routes, use NetworkFirst with caching
-		event.respondWith(
-			fetch(event.request)
-				.then(async (response) => {
-					// Cache successful responses
-					if (response.ok) {
-						const responseClone = response.clone();
-						const cache = await caches.open(CACHE_NAME);
-						cache.put(event.request, responseClone);
-					}
-					return response;
-				})
-				.catch(() => {
-					// Fallback to cache if network fails
-					return caches.match(event.request).then((cached) => {
-						if (cached) return cached;
-						return new Response('Offline', { status: 503 });
-					});
-				})
-		);
-		return;
-	}
-
-	// Static assets: CacheFirst (faster loading)
+	// CacheFirst for static assets only
 	event.respondWith(
 		caches.match(event.request).then((cached) => {
 			if (cached) return cached;
 
 			return fetch(event.request).then(async (response) => {
-				// Cache new resources
-				if (response.ok && ASSETS.includes(url.pathname)) {
+				// Cache new static resources
+				if (response.ok) {
 					const responseClone = response.clone();
 					const cache = await caches.open(CACHE_NAME);
 					cache.put(event.request, responseClone);
