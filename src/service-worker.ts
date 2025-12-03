@@ -59,8 +59,32 @@ sw.addEventListener('fetch', (event) => {
 	// Skip cross-origin requests
 	if (url.origin !== location.origin) return;
 
+	// Never cache auth-related pages - they need fresh session data
+	const isAuthPage =
+		url.pathname.startsWith('/auth/') || url.pathname.includes('pwa-callback');
+
+	if (isAuthPage) {
+		event.respondWith(fetch(event.request));
+		return;
+	}
+
 	// API routes: NetworkFirst (prioritize fresh data)
 	if (url.pathname.startsWith('/api/')) {
+		// NEVER cache authentication endpoints - they must always be fresh
+		const isAuthEndpoint =
+			url.pathname.startsWith('/api/auth/') ||
+			url.pathname.includes('magic-link') ||
+			url.pathname.includes('session') ||
+			url.pathname.includes('sign-in') ||
+			url.pathname.includes('sign-up');
+
+		if (isAuthEndpoint) {
+			// Bypass cache entirely for auth endpoints
+			event.respondWith(fetch(event.request));
+			return;
+		}
+
+		// For other API routes, use NetworkFirst with caching
 		event.respondWith(
 			fetch(event.request)
 				.then(async (response) => {

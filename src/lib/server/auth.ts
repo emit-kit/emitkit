@@ -5,6 +5,7 @@ import {
 	organization,
 	magicLink,
 	apiKey,
+	bearer,
 	type Organization,
 	type Member
 } from 'better-auth/plugins';
@@ -133,6 +134,7 @@ export const auth = betterAuth({
 				maxRequests: 100 // 100 requests per minute default
 			}
 		}),
+		bearer(),
 		// twoFactor(),
 		magicLink({
 			async sendMagicLink(data) {

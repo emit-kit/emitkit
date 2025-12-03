@@ -10,11 +10,27 @@
 	import { toast, Toaster } from 'svelte-sonner';
 	import { setSiteConfig, useSiteConfig } from '$lib/hooks/use-site-config.svelte';
 	import ModalStackProvider from '$lib/components/modal-stack/modal-stack-provider.svelte';
+	import { onMount } from 'svelte';
+	import { dev } from '$app/environment';
 
 	let { data, children } = $props();
 
 	setSiteConfig(data.config);
 	const config = useSiteConfig();
+
+	// Register service worker for PWA functionality
+	onMount(() => {
+		if ('serviceWorker' in navigator && !dev) {
+			navigator.serviceWorker
+				.register('/service-worker.js')
+				.then((registration) => {
+					console.log('Service Worker registered:', registration);
+				})
+				.catch((error) => {
+					console.error('Service Worker registration failed:', error);
+				});
+		}
+	});
 </script>
 
 {#if config.flags.darkMode}
