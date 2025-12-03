@@ -10,6 +10,7 @@
 	import { toast, Toaster } from 'svelte-sonner';
 	import { setSiteConfig, useSiteConfig } from '$lib/hooks/use-site-config.svelte';
 	import ModalStackProvider from '$lib/components/modal-stack/modal-stack-provider.svelte';
+	import PwaInstall from '$lib/components/pwa/pwa-install.svelte';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
 
@@ -38,6 +39,9 @@
 {/if}
 
 <Toaster />
+
+<!-- PWA Install prompt -->
+<PwaInstall useLocalStorage={true} />
 
 <AuthUIProvider {authClient} credentials={true} emailOTP={true} {toast}>
 	<ModalStackProvider>
