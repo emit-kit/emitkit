@@ -166,11 +166,11 @@ export const auth = betterAuth({
 		});
 
 		const origins = [
-			`https://${VERCEL_URL}/`,
+			`https://${VERCEL_URL}`,
 			...(env.VERCEL_PROJECT_PRODUCTION_URL
-				? [`https://${env.VERCEL_PROJECT_PRODUCTION_URL}/`]
+				? [`https://${env.VERCEL_PROJECT_PRODUCTION_URL}`]
 				: []),
-			...(env.VERCEL_BRANCH_URL ? [`https://${env.VERCEL_BRANCH_URL}/`] : [])
+			...(env.VERCEL_BRANCH_URL ? [`https://${env.VERCEL_BRANCH_URL}`] : [])
 		];
 
 		logger.info('Trusted origins', { origins });
