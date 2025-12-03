@@ -17,6 +17,11 @@ const betterAuthHandler: Handle = async ({ event, resolve }) => {
 		return svelteKitHandler({ event, resolve, auth, building });
 	}
 
+	// For public API routes (v1), skip session/org logic - authentication handled by API key middleware
+	if (event.url.pathname.startsWith('/api/v1')) {
+		return resolve(event);
+	}
+
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
 	if (session) {
@@ -164,8 +169,9 @@ const guardHandler: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	// Allow API routes (for webhooks, public APIs, etc.)
-	// TODO: Implement API key authentication if needed
+	// Allow API routes (authentication handled by route-specific middleware)
+	// - /api/auth: Better Auth routes (session-based)
+	// - /api/v1: Public API routes (API key-based via withAuth middleware)
 	if (event.url.pathname.startsWith('/api')) {
 		return resolve(event);
 	}
