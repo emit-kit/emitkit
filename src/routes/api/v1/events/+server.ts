@@ -59,8 +59,13 @@ export const POST: RequestHandler = async (event) => {
 						channelName: validatedData.channelName
 					});
 
-					// Parse and return cached response
-					const cached = JSON.parse(cachedResponse as string);
+					// Parse cached response - handle both string and object types
+					// (Redis client might auto-deserialize depending on configuration)
+					const cached =
+						typeof cachedResponse === 'string'
+							? JSON.parse(cachedResponse)
+							: cachedResponse;
+
 					return json(cached.body, {
 						status: cached.status,
 						headers: {

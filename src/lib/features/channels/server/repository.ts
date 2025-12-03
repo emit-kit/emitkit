@@ -6,6 +6,7 @@ import {
 	type PaginationParams
 } from '$lib/server/db/utils';
 import { createLogger } from '$lib/server/logger';
+import { slugify } from '$lib/server/utils/slug';
 
 const logger = createLogger('channels');
 
@@ -77,24 +78,33 @@ export async function getOrCreateChannel(
 		description?: string;
 	}
 ): Promise<Channel> {
-	// Try to find existing channel
-	const existing = await getChannelByNameAndSite(name, siteId);
+	// Slugify the channel name to ensure consistency (lowercase, hyphen-separated)
+	const slug = slugify(name);
+
+	// Try to find existing channel by slugified name
+	const existing = await getChannelByNameAndSite(slug, siteId);
 	if (existing) {
 		logger.info('Channel found, reusing existing', {
 			id: existing.id,
-			name,
+			name: slug,
+			originalName: name,
 			siteId,
 			organizationId
 		});
 		return existing;
 	}
 
-	// Create new channel
-	logger.info('Channel not found, creating new', { name, siteId, organizationId });
+	// Create new channel with slugified name
+	logger.info('Channel not found, creating new', {
+		name: slug,
+		originalName: name,
+		siteId,
+		organizationId
+	});
 	return await createChannel({
 		siteId,
 		organizationId,
-		name,
+		name: slug,
 		icon: options?.icon,
 		description: options?.description
 	});
