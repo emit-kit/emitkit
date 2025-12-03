@@ -176,20 +176,39 @@ export async function sendPushNotificationToChannels(
 	totalFailed: number;
 	byUser: Record<string, { success: number; failed: number }>;
 }> {
+	logger.info('Sending push notifications to channels', {
+		channelIds,
+		payloadTitle: payload.title
+	});
+
 	// Get subscriptions that include any of the target channels (filtered at DB level)
+	// Empty channelIds array means "subscribe to all channels"
 	const subscriptions = await db
 		.select()
 		.from(pushSubscriptionTable)
 		.where(
-			sql`EXISTS (
-				SELECT 1
-				FROM jsonb_array_elements_text(${pushSubscriptionTable.channelIds}) as channel_id
-				WHERE channel_id = ANY(${channelIds})
+			sql`(
+				jsonb_array_length(${pushSubscriptionTable.channelIds}) = 0
+				OR EXISTS (
+					SELECT 1
+					FROM jsonb_array_elements_text(${pushSubscriptionTable.channelIds}) as channel_id
+					WHERE channel_id = ANY(${channelIds})
+				)
 			)`
 		);
 
+	logger.info('Found push subscriptions', {
+		subscriptionCount: subscriptions.length,
+		channelIds
+	});
+
 	// Group by user
 	const userIds = [...new Set(subscriptions.map((sub) => sub.userId))];
+
+	logger.info('Sending to users', {
+		userCount: userIds.length,
+		userIds
+	});
 
 	// Send to each user
 	const byUser = await sendPushNotificationToUsers(userIds, payload);
@@ -197,6 +216,12 @@ export async function sendPushNotificationToChannels(
 	// Calculate totals
 	const totalSuccess = Object.values(byUser).reduce((sum, stats) => sum + stats.success, 0);
 	const totalFailed = Object.values(byUser).reduce((sum, stats) => sum + stats.failed, 0);
+
+	logger.info('Push notification results', {
+		totalSuccess,
+		totalFailed,
+		channelIds
+	});
 
 	return { totalSuccess, totalFailed, byUser };
 }

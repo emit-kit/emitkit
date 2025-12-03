@@ -9,6 +9,7 @@ import {
 	invalidateOrganizationCache,
 	publishToChannel
 } from '$lib/server/cache';
+import { waitUntil } from '$lib/server/wait-until';
 
 const logger = createLogger('events');
 
@@ -26,53 +27,59 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 	// 1. Create the event in Tinybird
 	const createdEvent = await createEvent(event, channel.siteId, false);
 
-	// 2. Invalidate caches (non-blocking)
-	Promise.all([
-		invalidateChannelCache(event.channelId),
-		invalidateOrganizationCache(event.organizationId)
-	]).catch((error) => {
-		logger.error('Failed to invalidate cache', error instanceof Error ? error : undefined, {
-			eventId: createdEvent.id,
-			channelId: event.channelId,
-			organizationId: event.organizationId
-		});
-	});
-
-	// 3. Publish to Redis pub/sub for SSE clients (non-blocking)
-	publishToChannel(`events:channel:${event.channelId}`, {
-		type: 'event',
-		data: createdEvent
-	}).catch((error) => {
-		logger.error('Failed to publish to Redis', error instanceof Error ? error : undefined, {
-			eventId: createdEvent.id,
-			channelId: event.channelId
-		});
-	});
-
-	// 4. Send push notifications if notify = true (non-blocking)
-	if (event.notify) {
-		sendPushNotificationToChannels([event.channelId], {
-			title: event.title,
-			body: event.description || undefined,
-			icon: event.icon || undefined,
-			tag: createdEvent.id,
-			data: {
+	// 2. Invalidate caches (non-blocking with waitUntil)
+	waitUntil(
+		Promise.all([
+			invalidateChannelCache(event.channelId),
+			invalidateOrganizationCache(event.organizationId)
+		]).catch((error) => {
+			logger.error('Failed to invalidate cache', error instanceof Error ? error : undefined, {
 				eventId: createdEvent.id,
 				channelId: event.channelId,
-				url: `/channels/${event.channelId}`
-			}
+				organizationId: event.organizationId
+			});
+		})
+	);
+
+	// 3. Publish to Redis pub/sub for SSE clients (non-blocking with waitUntil)
+	waitUntil(
+		publishToChannel(`events:channel:${event.channelId}`, {
+			type: 'event',
+			data: createdEvent
 		}).catch((error) => {
-			// Log but don't fail the request if push notifications fail
-			logger.error(
-				'Failed to send push notifications',
-				error instanceof Error ? error : undefined,
-				{
+			logger.error('Failed to publish to Redis', error instanceof Error ? error : undefined, {
+				eventId: createdEvent.id,
+				channelId: event.channelId
+			});
+		})
+	);
+
+	// 4. Send push notifications if notify = true (non-blocking with waitUntil)
+	if (event.notify) {
+		waitUntil(
+			sendPushNotificationToChannels([event.channelId], {
+				title: event.title,
+				body: event.description || undefined,
+				icon: event.icon || undefined,
+				tag: createdEvent.id,
+				data: {
 					eventId: createdEvent.id,
 					channelId: event.channelId,
-					organizationId: event.organizationId
+					url: `/channels/${event.channelId}`
 				}
-			);
-		});
+			}).catch((error) => {
+				// Log but don't fail the request if push notifications fail
+				logger.error(
+					'Failed to send push notifications',
+					error instanceof Error ? error : undefined,
+					{
+						eventId: createdEvent.id,
+						channelId: event.channelId,
+						organizationId: event.organizationId
+					}
+				);
+			})
+		);
 	}
 
 	return createdEvent;

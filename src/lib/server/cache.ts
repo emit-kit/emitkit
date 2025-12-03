@@ -1,5 +1,6 @@
 import { redis } from '$lib/server/redis';
 import { createLogger } from '$lib/server/logger';
+import { waitUntil } from './wait-until';
 
 const logger = createLogger('cache');
 
@@ -29,8 +30,26 @@ export async function withCache<T>(
 		// Try cache first
 		const cached = await redis.get(cacheKey);
 		if (cached !== null) {
-			logger.info('Cache hit', { key: cacheKey });
-			return JSON.parse(cached as string) as T;
+			// Validate that cached value is parseable JSON before returning
+			try {
+				const parsed = JSON.parse(cached as string) as T;
+				logger.info('Cache hit', { key: cacheKey });
+				return parsed;
+			} catch (parseError) {
+				// Cache contains malformed JSON - invalidate it
+				logger.warn('Cache contains malformed JSON, invalidating', {
+					key: cacheKey,
+					cachedValue: typeof cached === 'string' ? cached.substring(0, 100) : '[non-string]'
+				});
+				// Delete the corrupted cache entry (non-blocking with waitUntil)
+				waitUntil(
+					redis.del(cacheKey).catch((delError) => {
+						logger.error('Failed to delete corrupted cache', delError instanceof Error ? delError : undefined, {
+							key: cacheKey
+						});
+					})
+				);
+			}
 		}
 
 		logger.info('Cache miss', { key: cacheKey });
@@ -44,13 +63,24 @@ export async function withCache<T>(
 	// Cache miss - fetch from source
 	const data = await fetcher();
 
-	// Store in cache (non-blocking, fire-and-forget)
-	redis.setex(cacheKey, ttl, JSON.stringify(data)).catch((error) => {
-		logger.error('Cache write error', error instanceof Error ? error : undefined, {
+	// Store in cache (non-blocking, fire-and-forget with waitUntil)
+	// Add validation before caching
+	try {
+		const serialized = JSON.stringify(data);
+		waitUntil(
+			redis.setex(cacheKey, ttl, serialized).catch((error) => {
+				logger.error('Cache write error', error instanceof Error ? error : undefined, {
+					key: cacheKey,
+					ttl
+				});
+			})
+		);
+	} catch (serializeError) {
+		logger.error('Failed to serialize data for cache', serializeError instanceof Error ? serializeError : undefined, {
 			key: cacheKey,
-			ttl
+			dataType: typeof data
 		});
-	});
+	}
 
 	return data;
 }

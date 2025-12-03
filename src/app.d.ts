@@ -21,6 +21,11 @@ declare global {
 		interface PageData {
 			orgId: string;
 		}
+		interface Platform {
+			context?: {
+				waitUntil(promise: Promise<unknown>): void;
+			};
+		}
 	}
 }
 
