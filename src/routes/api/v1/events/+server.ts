@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { createContextLogger } from '$lib/server/logger';
 import { redis } from '$lib/server/redis';
 import { waitUntil } from '$lib/server/wait-until';
+import { resolveUserId } from '$lib/features/identity/server/user-identity.repository';
 
 const jsonValueSchema: z.ZodType<
 	string | number | boolean | null | Array<unknown> | Record<string, unknown>
@@ -77,6 +78,19 @@ export const POST: RequestHandler = async (event) => {
 				description: validatedData.description
 			});
 
+			// Resolve userId if provided (supports both direct userId and aliases)
+			let resolvedUserId = validatedData.userId;
+			if (validatedData.userId) {
+				const resolved = await resolveUserId(validatedData.userId, orgId);
+				if (resolved) {
+					resolvedUserId = resolved;
+					logger.info('Resolved userId from alias', {
+						original: validatedData.userId,
+						resolved: resolvedUserId
+					});
+				}
+			}
+
 			// Create and broadcast the event
 			const createdEvent = await createAndBroadcastEvent({
 				channelId: channel.id,
@@ -87,7 +101,7 @@ export const POST: RequestHandler = async (event) => {
 				icon: validatedData.icon,
 				tags: validatedData.tags,
 				metadata: validatedData.metadata,
-				userId: validatedData.userId,
+				userId: resolvedUserId,
 				notify: validatedData.notify,
 				displayAs: validatedData.displayAs,
 				source: validatedData.source ?? 'api'

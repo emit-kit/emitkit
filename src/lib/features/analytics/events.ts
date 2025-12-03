@@ -42,6 +42,30 @@ export const appEvents = {
 			error: string;
 			reason?: string;
 		}
+	},
+
+	// Identity Events
+	user_identified: {
+		name: 'user_identified',
+		category: 'user',
+		properties: {} as {
+			organizationId: string;
+			apiKeyId: string;
+			userId: string;
+			aliasCount?: number;
+			hasProperties: boolean;
+		}
+	},
+	user_identify_failed: {
+		name: 'user_identify_failed',
+		category: 'error',
+		properties: {} as {
+			organizationId?: string;
+			apiKeyId?: string;
+			userId?: string;
+			error: string;
+			statusCode: number;
+		}
 	}
 } as const satisfies EventCollection<Record<string, CreateEventDefinition<string>>>;
 
