@@ -1,22 +1,22 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readFileSync } from 'fs';
 import { parse } from 'yaml';
-import { join } from 'path';
+
+// Import the YAML file as a raw string at build time
+// Vite will bundle this, making it available in serverless environments
+import openapiYaml from '../../../../openapi/openapi.yaml?raw';
 
 let cachedSpec: object | null = null;
 
 /**
  * Serves the OpenAPI specification in JSON format
- * This allows tools like Swagger UI, Postman, and SDK generators to consume the spec
+ * This allows tools like Mintlify, Postman, and SDK generators to consume the spec
  */
 export const GET: RequestHandler = async () => {
 	try {
 		// Cache the parsed spec to avoid re-parsing on every request
 		if (!cachedSpec) {
-			const specPath = join(process.cwd(), 'openapi', 'openapi.yaml');
-			const yamlContent = readFileSync(specPath, 'utf-8');
-			cachedSpec = parse(yamlContent);
+			cachedSpec = parse(openapiYaml);
 		}
 
 		return json(cachedSpec, {

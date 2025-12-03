@@ -1,8 +1,8 @@
 import type { RequestHandler } from './$types';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-let cachedSpec: string | null = null;
+// Import the YAML file as a raw string at build time
+// Vite will bundle this, making it available in serverless environments
+import openapiYaml from '../../../../openapi/openapi.yaml?raw';
 
 /**
  * Serves the OpenAPI specification in YAML format
@@ -10,13 +10,7 @@ let cachedSpec: string | null = null;
  */
 export const GET: RequestHandler = async () => {
 	try {
-		// Cache the spec to avoid re-reading on every request
-		if (!cachedSpec) {
-			const specPath = join(process.cwd(), 'openapi', 'openapi.yaml');
-			cachedSpec = readFileSync(specPath, 'utf-8');
-		}
-
-		return new Response(cachedSpec, {
+		return new Response(openapiYaml, {
 			headers: {
 				'Content-Type': 'text/yaml',
 				'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
