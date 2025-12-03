@@ -95,6 +95,44 @@ class TinybirdClient {
 	}
 
 	/**
+	 * Ingest data into a specific datasource
+	 *
+	 * @param datasourceName - Name of the datasource (e.g., 'events', 'user_identities')
+	 * @param data - Data to ingest (single object or array)
+	 * @param wait - If true, waits for data to be committed before responding
+	 * @returns Promise with ingestion response
+	 */
+	async ingestToDatasource(
+		datasourceName: string,
+		data: unknown,
+		wait: boolean = false
+	): Promise<TinybirdIngestResponse> {
+		const url = `${this.baseUrl}/v0/events?name=${datasourceName}${wait ? '&wait=true' : ''}`;
+
+		const body = Array.isArray(data)
+			? data.map((item) => JSON.stringify(item)).join('\n')
+			: JSON.stringify(data);
+
+		const contentType = Array.isArray(data) ? 'application/x-ndjson' : 'application/json';
+
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${this.token}`,
+				'Content-Type': contentType
+			},
+			body
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Tinybird ingestion failed: ${response.status} ${error}`);
+		}
+
+		return response.json();
+	}
+
+	/**
 	 * Query a Tinybird pipe (API endpoint)
 	 *
 	 * @param pipeName - Name of the pipe to query

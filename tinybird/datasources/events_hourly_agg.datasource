@@ -9,6 +9,9 @@ SCHEMA >
     `event_count` SimpleAggregateFunction(sum, UInt64),
     `unique_users` AggregateFunction(uniq, String)
 
+FORWARD_QUERY >
+    SELECT *
+
 ENGINE "AggregatingMergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(hour)"
 ENGINE_SORTING_KEY "organization_id, channel_id, hour"

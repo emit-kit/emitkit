@@ -4,7 +4,7 @@ DESCRIPTION >
 
 TOKEN "funnel_by_segment_endpoint" READ
 
-NODE funnel_by_segment
+NODE segment_funnel
 SQL >
     %
     WITH latest_users AS (
@@ -22,7 +22,7 @@ SQL >
         SELECT
             e.user_id,
             e.title as event_name,
-            e.timestamp,
+            e.created_at,
             JSONExtractString(u.properties, {{ String(segment_by, 'plan') }}) as segment
         FROM events e
         INNER JOIN latest_users u
@@ -32,10 +32,10 @@ SQL >
         WHERE e.organization_id = {{ String(organization_id, required=True) }}
           AND e.channel_id = {{ String(channel_id, required=True) }}
           {% if defined(date_from) %}
-            AND e.timestamp >= {{ DateTime(date_from) }}
+            AND e.created_at >= {{ DateTime(date_from) }}
           {% end %}
           {% if defined(date_to) %}
-            AND e.timestamp <= {{ DateTime(date_to) }}
+            AND e.created_at <= {{ DateTime(date_to) }}
           {% end %}
     )
     SELECT
@@ -47,3 +47,5 @@ SQL >
     WHERE event_name IN ({{ Array(funnel_steps, 'String', required=True) }})
     GROUP BY segment, event_name
     ORDER BY segment, event_name
+
+TYPE endpoint

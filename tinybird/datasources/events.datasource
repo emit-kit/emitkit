@@ -21,6 +21,24 @@ SCHEMA >
     `source` String `json:$.source`,
     `created_at` DateTime64(3) `json:$.created_at`
 
+FORWARD_QUERY >
+    SELECT
+        id,
+        channel_id,
+        site_id,
+        organization_id,
+        'pro' AS retention_tier,
+        title,
+        description,
+        icon,
+        tags,
+        metadata,
+        user_id,
+        notify,
+        display_as,
+        source,
+        created_at
+
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(created_at)"
 ENGINE_SORTING_KEY "organization_id, retention_tier, site_id, channel_id, created_at"

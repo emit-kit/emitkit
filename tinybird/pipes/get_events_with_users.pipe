@@ -20,7 +20,7 @@ SQL >
         e.notify,
         e.display_as,
         e.source,
-        e.timestamp,
+        e.created_at,
         u.email as user_email,
         u.name as user_name,
         u.properties as user_properties
@@ -43,11 +43,13 @@ SQL >
         AND e.channel_id = {{ String(channel_id) }}
       {% end %}
       {% if defined(date_from) %}
-        AND e.timestamp >= {{ DateTime(date_from) }}
+        AND e.created_at >= {{ DateTime(date_from) }}
       {% end %}
       {% if defined(date_to) %}
-        AND e.timestamp <= {{ DateTime(date_to) }}
+        AND e.created_at <= {{ DateTime(date_to) }}
       {% end %}
-    ORDER BY e.timestamp DESC
+    ORDER BY e.created_at DESC
     LIMIT {{ Int32(limit, 100) }}
     OFFSET {{ Int32(offset, 0) }}
+
+TYPE endpoint

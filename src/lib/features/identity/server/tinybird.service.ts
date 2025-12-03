@@ -62,7 +62,7 @@ export async function upsertUserIdentity(data: UserIdentityData): Promise<UserId
 		updated_at: now
 	};
 
-	await tinybird.ingestEvent(identity as any, false); // Non-blocking
+	await tinybird.ingestToDatasource('user_identities', identity, false); // Non-blocking
 
 	return {
 		id: identity.id,

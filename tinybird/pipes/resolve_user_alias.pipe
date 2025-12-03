@@ -4,7 +4,7 @@ DESCRIPTION >
 
 TOKEN "resolve_user_alias_endpoint" READ
 
-NODE resolve_user_alias
+NODE resolve_alias
 SQL >
     %
     SELECT
@@ -19,3 +19,5 @@ SQL >
       )
     ORDER BY updated_at DESC
     LIMIT 1
+
+TYPE endpoint
