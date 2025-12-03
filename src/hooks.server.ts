@@ -21,6 +21,15 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 
 	const originalPath = event.url.pathname;
 
+	logger.info('API subdomain request received', {
+		host,
+		originalPath,
+		startsWithV1: originalPath.startsWith('/v1/'),
+		pathLength: originalPath.length,
+		firstChar: originalPath[0],
+		secondChar: originalPath[1]
+	});
+
 	// Only allow /v1/* paths on the API subdomain
 	if (!originalPath.startsWith('/v1/')) {
 		logger.warn('Invalid API subdomain path', {
@@ -31,7 +40,7 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		return new Response(
 			JSON.stringify({
 				error: 'Not Found',
-				message: 'Invalid API endpoint. Only /v1/* paths are supported.'
+				message: `Invalid API endpoint. Only /v1/* paths are supported. Received: ${originalPath}`
 			}),
 			{
 				status: 404,
