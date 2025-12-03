@@ -6,28 +6,121 @@ import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import { createContextLogger } from '$lib/server/logger';
 
+// ============================================================================
+// Utilities
+// ============================================================================
+
+function isApiSubdomain(host: string | null): boolean {
+	return host?.startsWith('api.') ?? false;
+}
+
+function isAuthRoute(pathname: string): boolean {
+	return pathname.startsWith('/auth');
+}
+
+function isApiRoute(pathname: string): boolean {
+	return pathname.startsWith('/api');
+}
+
+function isSignInOrSignUp(pathname: string): boolean {
+	return pathname === '/auth/sign-in' || pathname === '/auth/sign-up';
+}
+
+/**
+ * Ensures the user has a valid active organization.
+ * If the current activeOrganizationId is invalid, attempts to reset to first available org.
+ */
+async function ensureActiveOrganization(
+	event: Parameters<Handle>[0]['event'],
+	logger: ReturnType<typeof createContextLogger>
+): Promise<void> {
+	const session = event.locals.session;
+	if (!session) return;
+
+	const activeOrgId = session.activeOrganizationId;
+
+	// Fetch the active organization and member relationship
+	const [member, activeOrg] = await Promise.all([
+		activeOrgId ? auth.api.getActiveMember({ headers: event.request.headers }) : null,
+		activeOrgId
+			? db.query.organization.findFirst({
+					where: (organization, { eq }) => eq(organization.id, activeOrgId)
+				})
+			: null
+	]);
+
+	// If valid organization and member exist, set them and return
+	if (activeOrgId && activeOrg && member) {
+		event.locals.activeOrganization = activeOrg;
+		event.locals.activeOrganizationMember = member;
+		return;
+	}
+
+	// Organization or member is missing - try to fix it
+	if (activeOrgId && !member) {
+		// Check if member exists in DB but wasn't loaded properly
+		const directMember = await db.query.member.findFirst({
+			where: (m, { and, eq }) =>
+				and(eq(m.userId, session.userId), eq(m.organizationId, activeOrgId))
+		});
+
+		if (directMember && activeOrg) {
+			event.locals.activeOrganizationMember = directMember;
+			event.locals.activeOrganization = activeOrg;
+			return;
+		}
+
+		logger.info('User not a member of active organization, resetting to first available', {
+			userId: session.userId,
+			attemptedOrgId: activeOrgId
+		});
+	}
+
+	// Find and set first available organization
+	const firstOrg = await db.query.member.findFirst({
+		where: (member, { eq }) => eq(member.userId, session.userId),
+		with: { organization: true }
+	});
+
+	if (firstOrg) {
+		await auth.api.setActiveOrganization({
+			headers: event.request.headers,
+			body: { organizationId: firstOrg.organizationId }
+		});
+
+		session.activeOrganizationId = firstOrg.organizationId;
+		event.locals.activeOrganization = firstOrg.organization;
+		event.locals.activeOrganizationMember = firstOrg;
+	} else {
+		// User has no organizations at all
+		session.activeOrganizationId = undefined;
+		event.locals.activeOrganization = undefined;
+		event.locals.activeOrganizationMember = undefined;
+	}
+}
+
+// ============================================================================
+// Handlers
+// ============================================================================
+
 /**
  * API Subdomain Handler
- * Validates and routes requests from api.emitkit.com
- * The actual route must exist at /api/v1/* for this to work
+ * Validates requests from api.emitkit.com and ensures only /v1/* paths are allowed.
+ * Actual routes must exist at /v1/* (e.g., /v1/events/+server.ts)
  */
 const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 	const host = event.request.headers.get('host');
 
-	// Only process requests from api.emitkit.com
-	if (!host?.startsWith('api.')) {
+	if (!isApiSubdomain(host)) {
 		return resolve(event);
 	}
 
-	const logger = createContextLogger('api-subdomain-handler');
-	const originalPath = event.url.pathname;
+	const pathname = event.url.pathname;
 
 	// Only allow /v1/* paths on the API subdomain
-	if (!originalPath.startsWith('/v1/')) {
-		logger.warn('Invalid API subdomain path', {
-			host,
-			path: originalPath
-		});
+	if (!pathname.startsWith('/v1/')) {
+		const logger = createContextLogger('api-subdomain-handler');
+		logger.warn('Invalid API subdomain path', { host, path: pathname });
 
 		return new Response(
 			JSON.stringify({
@@ -44,139 +137,53 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+/**
+ * Better Auth Handler
+ * Sets up authentication session and organization context for authenticated users.
+ * Skips session logic for API subdomain and API routes (handled by API key middleware).
+ */
 const betterAuthHandler: Handle = async ({ event, resolve }) => {
 	const logger = createContextLogger('auth-handler');
+	const host = event.request.headers.get('host');
+	const pathname = event.url.pathname;
 
 	event.locals.getSession = auth.api.getSession;
 	event.locals.auth = auth;
 
-	// For API subdomain requests (api.emitkit.com), skip session/org logic - authentication handled by API key middleware
-	const host = event.request.headers.get('host');
-	if (host?.startsWith('api.')) {
+	// Skip session/org logic for API subdomain (handled by API key middleware)
+	if (isApiSubdomain(host)) {
 		return resolve(event);
 	}
 
-	// For Better Auth API routes, skip session/org logic and let svelteKitHandler handle it directly
-	if (event.url.pathname.startsWith('/api/auth')) {
+	// For Better Auth API routes, let svelteKitHandler handle it directly
+	if (pathname.startsWith('/api/auth')) {
 		return svelteKitHandler({ event, resolve, auth, building });
 	}
 
-	// For public API routes (v1), skip session/org logic - authentication handled by API key middleware
-	if (event.url.pathname.startsWith('/api/v1')) {
+	// Skip session/org logic for public API routes (handled by API key middleware)
+	if (pathname.startsWith('/api/v1')) {
 		return resolve(event);
 	}
 
+	// Load session
 	const session = await auth.api.getSession({ headers: event.request.headers });
-
 	if (session) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 	}
 
-	const [member, activeOrg] = await Promise.all([
-		event.locals.session?.activeOrganizationId
-			? auth.api.getActiveMember({ headers: event.request.headers })
-			: Promise.resolve(null),
-		event.locals.session?.activeOrganizationId
-			? db.query.organization.findFirst({
-					where: (organization, { eq }) =>
-						eq(organization.id, event.locals.session?.activeOrganizationId ?? '')
-				})
-			: Promise.resolve(null)
-	]);
-
-	// Handle invalid or missing activeOrganizationId
-	if (
-		event.locals.session &&
-		(!event.locals.session?.activeOrganizationId || !activeOrg || !member)
-	) {
-		// Check if we need to validate the member relationship
-		// Sometimes after invitation acceptance, there might be a timing issue
-		if (event.locals.session?.activeOrganizationId && !member) {
-			// Try to fetch the member record directly from the database
-			const directMember = await db.query.member.findFirst({
-				where: (m, { and, eq }) =>
-					and(
-						eq(m.userId, event.locals.session?.userId ?? ''),
-						eq(m.organizationId, event.locals.session?.activeOrganizationId ?? '')
-					)
-			});
-
-			if (directMember) {
-				// Member exists in DB but wasn't loaded properly, update locals
-				event.locals.activeOrganizationMember = directMember;
-				event.locals.activeOrganization = activeOrg ?? undefined;
-			} else {
-				// Member doesn't exist, need to reset to a valid organization
-				logger.info('User not a member of active organization, resetting to first available', {
-					userId: event.locals.session.userId,
-					attemptedOrgId: event.locals.session.activeOrganizationId
-				});
-
-				// Find first valid organization
-				const firstOrg = await db.query.member.findFirst({
-					where: (member, { eq }) => eq(member.userId, event.locals.session?.userId ?? ''),
-					with: {
-						organization: true
-					}
-				});
-
-				if (firstOrg) {
-					await auth.api.setActiveOrganization({
-						headers: event.request.headers,
-						body: {
-							organizationId: firstOrg.organizationId
-						}
-					});
-
-					event.locals.session.activeOrganizationId = firstOrg.organizationId;
-					event.locals.activeOrganization = firstOrg.organization;
-					event.locals.activeOrganizationMember = firstOrg;
-				} else {
-					// User has no organizations at all - clear the invalid activeOrganizationId
-					event.locals.session.activeOrganizationId = undefined;
-					event.locals.activeOrganization = undefined;
-					event.locals.activeOrganizationMember = undefined;
-				}
-			}
-		} else if (!event.locals.session?.activeOrganizationId) {
-			// No active organization set, find first available
-			const firstOrg = await db.query.member.findFirst({
-				where: (member, { eq }) => eq(member.userId, event.locals.session?.userId ?? ''),
-				with: {
-					organization: true
-				}
-			});
-
-			if (firstOrg) {
-				await auth.api.setActiveOrganization({
-					headers: event.request.headers,
-					body: {
-						organizationId: firstOrg.organizationId
-					}
-				});
-
-				event.locals.session.activeOrganizationId = firstOrg.organizationId;
-				event.locals.activeOrganization = firstOrg.organization;
-				event.locals.activeOrganizationMember = firstOrg;
-			}
-		}
-	} else {
-		event.locals.activeOrganization = activeOrg ?? undefined;
-		event.locals.activeOrganizationMember = member ?? undefined;
-	}
+	// Ensure user has a valid active organization
+	await ensureActiveOrganization(event, logger);
 
 	// CRITICAL: If user has a session but no active organization, something went wrong
-	// Every user should have a default organization created during signup
 	if (event.locals.session && !event.locals.activeOrganization) {
 		logger.error('CRITICAL: Authenticated user has no active organization', undefined, {
 			userId: event.locals.session.userId,
 			sessionId: event.locals.session.id,
-			activeOrganizationId: event.locals.session.activeOrganizationId,
-			timestamp: new Date().toISOString()
+			activeOrganizationId: event.locals.session.activeOrganizationId
 		});
 		throw new Error(
-			'User authentication is in an invalid state. No organization found for authenticated user. This should never happen as users are assigned a default organization during signup.'
+			'User authentication is in an invalid state. No organization found for authenticated user.'
 		);
 	}
 
@@ -193,60 +200,64 @@ const betterAuthHandler: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
+/**
+ * Guard Handler
+ * Ensures proper authentication and authorization for protected routes.
+ * Redirects unauthenticated users to sign-in page.
+ */
 const guardHandler: Handle = async ({ event, resolve }) => {
 	const logger = createContextLogger('guard-handler');
-
-	// Allow API subdomain requests (api.emitkit.com) - authentication handled by route-specific middleware
 	const host = event.request.headers.get('host');
-	if (host?.startsWith('api.')) {
+	const pathname = event.url.pathname;
+
+	// Skip guard for API subdomain (authentication handled by API key middleware)
+	if (isApiSubdomain(host)) {
 		return resolve(event);
 	}
 
-	// Allow auth routes to be accessible without session
-	if (event.url.pathname.startsWith('/auth')) {
-		// If user has session and tries to access sign-in or sign-up, redirect to root
-		if (
-			event.locals.session &&
-			(event.url.pathname === '/auth/sign-in' || event.url.pathname === '/auth/sign-up')
-		) {
-			logger.info('User with session trying to access auth route, redirecting to root', {
+	// Handle auth routes
+	if (isAuthRoute(pathname)) {
+		// Redirect authenticated users away from sign-in/sign-up
+		if (event.locals.session && isSignInOrSignUp(pathname)) {
+			logger.info('Authenticated user accessing auth page, redirecting to root', {
 				userId: event.locals.session.userId,
-				path: event.url.pathname
+				path: pathname
 			});
 			redirect(302, '/');
 		}
-		// Otherwise allow access to auth routes (sign-in, sign-up, reset password, etc.)
 		return resolve(event);
 	}
 
-	// Allow API routes (authentication handled by route-specific middleware)
-	// - /api/auth: Better Auth routes (session-based)
-	// - /api/v1: Public API routes (API key-based via withAuth middleware)
-	if (event.url.pathname.startsWith('/api')) {
+	// Skip guard for API routes (authentication handled by middleware)
+	if (isApiRoute(pathname)) {
 		return resolve(event);
 	}
 
-	// For all non-auth routes, require a session
+	// Require session for all other routes
 	if (!event.locals.session) {
 		redirect(302, '/auth/sign-in');
 	}
 
-	// CRITICAL: Ensure active organization exists for all protected routes
-	// This should never fail due to the check in betterAuthHandler
+	// Ensure active organization exists for protected routes
 	if (!event.locals.activeOrganization) {
-		logger.error(
-			'CRITICAL: Guard handler - authenticated user has no active organization',
-			undefined,
-			{
-				userId: event.locals.session.userId,
-				path: event.url.pathname,
-				timestamp: new Date().toISOString()
-			}
-		);
+		logger.error('CRITICAL: Guard - authenticated user has no active organization', undefined, {
+			userId: event.locals.session.userId,
+			path: pathname
+		});
 		throw new Error('Cannot access protected routes without an active organization');
 	}
 
 	return resolve(event);
 };
 
+// ============================================================================
+// Handler Sequence
+// ============================================================================
+
+/**
+ * Handler execution order:
+ * 1. apiSubdomainHandler - Validates api.emitkit.com requests
+ * 2. betterAuthHandler - Sets up session and organization context
+ * 3. guardHandler - Enforces authentication requirements
+ */
 export const handle = sequence(apiSubdomainHandler, betterAuthHandler, guardHandler);
