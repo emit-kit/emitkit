@@ -1,4 +1,4 @@
-import { redirect, type Handle } from '@sveltejs/kit';
+import { redirect, type Handle, type Reroute } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/environment';
@@ -118,8 +118,7 @@ const requestIdHandler: Handle = async ({ event, resolve }) => {
 /**
  * API Subdomain Handler
  * Validates requests from api.emitkit.com and ensures only /v1/* and /api/* paths are allowed.
- * API routes are proxied from /v1/* to /api/v1/* (e.g., /v1/events → /api/v1/events/+server.ts)
- * Meta routes at /api/* (e.g., /api/openapi.json, /api/docs)
+ * Note: /v1/* paths are rewritten to /api/v1/* by the reroute hook below.
  */
 const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 	const host = event.request.headers.get('host');
@@ -275,3 +274,29 @@ const guardHandler: Handle = async ({ event, resolve }) => {
  * 4. guardHandler - Enforces authentication requirements
  */
 export const handle = sequence(requestIdHandler, apiSubdomainHandler, betterAuthHandler, guardHandler);
+
+// ============================================================================
+// Reroute Hook
+// ============================================================================
+
+/**
+ * Reroute Hook
+ * Rewrites /v1/* to /api/v1/* for the API subdomain.
+ * This allows clean public URLs (api.emitkit.com/v1/events) while keeping
+ * actual route files organized in /src/routes/api/v1/*.
+ */
+export const reroute: Reroute = ({ url }) => {
+	const host = url.hostname;
+
+	// Only reroute for api subdomain (api.emitkit.com or api.localhost)
+	if (host.startsWith('api.')) {
+		const pathname = url.pathname;
+
+		// Rewrite /v1/* to /api/v1/*
+		if (pathname.startsWith('/v1/')) {
+			return pathname.replace(/^\/v1\//, '/api/v1/');
+		}
+	}
+
+	return url.pathname;
+};
