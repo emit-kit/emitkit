@@ -43,6 +43,13 @@
       "when": 1764682142703,
       "tag": "0005_powerful_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1764786127763,
+      "tag": "0006_supreme_red_hulk",
+      "breakpoints": true
     }
   ]
 }
