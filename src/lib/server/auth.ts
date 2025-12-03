@@ -21,7 +21,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { createLogger } from '$lib/server/logger';
 import { siteConfig } from './site-config';
 import { env } from '$env/dynamic/private';
-import { VERCEL_URL } from '$env/static/private';
 
 const logger = createLogger('auth');
 
@@ -243,10 +242,10 @@ export const auth = betterAuth({
 	},
 	trustedOrigins() {
 		const baseUrls: string[] = [
-			VERCEL_URL,
+			env.VERCEL_URL,
 			...(env.VERCEL_PROJECT_PRODUCTION_URL ? [env.VERCEL_PROJECT_PRODUCTION_URL] : []),
 			...(env.VERCEL_BRANCH_URL ? [env.VERCEL_BRANCH_URL] : [])
-		];
+		].filter((url): url is string => Boolean(url));
 
 		// Generate origins with and without trailing slash
 		const origins = baseUrls.flatMap((url) => [`https://${url}`, `https://${url}/`]);

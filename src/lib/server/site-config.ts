@@ -4,7 +4,27 @@ import { env } from '$env/dynamic/private';
 const getAppUrl = () => {
 	const protocol = import.meta.env.PROD ? 'https://' : 'http://';
 
-	return `${protocol}${env.VERCEL_PROJECT_PRODUCTION_URL ?? env.VERCEL_URL}`;
+	// In production environment, use the production custom domain
+	// Otherwise use the deployment-specific URL (preview/branch deployments)
+	const isProductionEnv = env.VERCEL_TARGET_ENV === 'production';
+	const domain = isProductionEnv && env.VERCEL_PROJECT_PRODUCTION_URL
+		? env.VERCEL_PROJECT_PRODUCTION_URL
+		: env.VERCEL_URL;
+
+	const appUrl = `${protocol}${domain}`;
+
+	// Log configuration on startup (helpful for debugging)
+	if (import.meta.env.PROD) {
+		console.log('[site-config] App URL configuration:', {
+			appUrl,
+			isProductionEnv,
+			VERCEL_TARGET_ENV: env.VERCEL_TARGET_ENV,
+			VERCEL_PROJECT_PRODUCTION_URL: env.VERCEL_PROJECT_PRODUCTION_URL,
+			VERCEL_URL: env.VERCEL_URL
+		});
+	}
+
+	return appUrl;
 };
 
 export const siteConfig = {
