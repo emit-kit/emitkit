@@ -3,7 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db, schema } from '$lib/server/db/index.js';
 import {
 	organization,
-	magicLink,
+	emailOTP,
 	apiKey,
 	bearer,
 	type Organization,
@@ -136,35 +136,54 @@ export const auth = betterAuth({
 		}),
 		bearer(),
 		// twoFactor(),
-		magicLink({
-			async sendMagicLink(data) {
-				const operation = logger.start('Send magic link email', {
-					email: data.email
+		emailOTP({
+			async sendVerificationOTP({ email, otp, type }, request) {
+				const operation = logger.start('Send OTP email', {
+					email,
+					type
 				});
 
 				try {
-					const { emailService, MagicLoginLink } = await import(
-						'$lib/features/email/server/index.js'
+					const { emailService, OTPEmail } = await import('$lib/features/email/server/index.js');
+
+					let subject: string;
+					if (type === 'sign-in') {
+						subject = `Your ${siteConfig.appName} verification code`;
+					} else if (type === 'email-verification') {
+						subject = `Verify your ${siteConfig.appName} email`;
+					} else {
+						subject = `Reset your ${siteConfig.appName} password`;
+					}
+
+					// Detect if request is from mobile device
+					const userAgent = request?.headers.get('user-agent') || '';
+					const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+						userAgent
 					);
 
 					await emailService.sendEmail({
-						to: data.email,
-						subject: `Sign in to ${siteConfig.appName}`,
-						component: MagicLoginLink,
+						to: email,
+						subject,
+						component: OTPEmail,
 						props: {
-							email: data.email,
-							url: data.url
+							email,
+							otp,
+							type,
+							isMobile
 						}
 					});
 
-					operation.end({ sent: true });
+					operation.end({ sent: true, isMobile });
 				} catch (error) {
-					operation.error('Failed to send magic link email', error, {
-						email: data.email
+					operation.error('Failed to send OTP email', error, {
+						email,
+						type
 					});
 					// Don't throw - we don't want to break auth flow
 				}
-			}
+			},
+			otpLength: 6, // 6-digit code
+			expiresIn: 60 * 15 // 15 minutes
 		})
 		// lastLoginMethod()
 		// multiSession()
