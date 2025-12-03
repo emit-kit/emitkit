@@ -33,7 +33,13 @@
 			{
 				title: 'Settings',
 				url: '/organization/settings',
-				icon: Settings2Icon
+				icon: Settings2Icon,
+				items: [
+					{
+						title: 'Notification Settings',
+						url: '/settings/notifications'
+					}
+				]
 			},
 			{
 				title: 'Help',

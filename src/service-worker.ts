@@ -25,6 +25,8 @@ const ASSETS = [...build, ...files];
 
 /**
  * Install event - cache all static assets
+ * Note: We DON'T call skipWaiting() here to avoid breaking the current session.
+ * The new SW will wait until all tabs are closed before activating.
  */
 sw.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -32,9 +34,25 @@ sw.addEventListener('install', (event) => {
 			.open(CACHE_NAME)
 			.then((cache) => cache.addAll(ASSETS))
 			.then(() => {
-				sw.skipWaiting();
+				// Tell clients a new version is available
+				sw.clients.matchAll({ type: 'window' }).then((clients) => {
+					clients.forEach((client) => {
+						client.postMessage({
+							type: 'SW_UPDATE_AVAILABLE'
+						});
+					});
+				});
 			})
 	);
+});
+
+/**
+ * Message handler - allows clients to trigger skipWaiting when user accepts update
+ */
+sw.addEventListener('message', (event) => {
+	if (event.data?.type === 'SKIP_WAITING') {
+		sw.skipWaiting();
+	}
 });
 
 /**

@@ -26,10 +26,46 @@
 				.register('/service-worker.js')
 				.then((registration) => {
 					console.log('Service Worker registered:', registration);
+
+					// Check for updates every 60 seconds (when app is active)
+					setInterval(() => {
+						registration.update();
+					}, 60000);
 				})
 				.catch((error) => {
 					console.error('Service Worker registration failed:', error);
 				});
+
+			// Listen for update notifications from service worker
+			navigator.serviceWorker.addEventListener('message', (event) => {
+				if (event.data?.type === 'SW_UPDATE_AVAILABLE') {
+					// Show toast with update prompt
+					toast.info('New version available!', {
+						description: 'Refresh to get the latest features and fixes.',
+						duration: Infinity, // Don't auto-dismiss
+						action: {
+							label: 'Refresh',
+							onClick: () => {
+								// Tell the waiting service worker to activate
+								const waitingSW = navigator.serviceWorker.controller;
+								if (waitingSW) {
+									navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' });
+								}
+								// Reload the page once the new SW takes over
+								navigator.serviceWorker.addEventListener('controllerchange', () => {
+									window.location.reload();
+								});
+							}
+						},
+						cancel: {
+							label: 'Later',
+							onClick: () => {
+								// User can continue with old version
+							}
+						}
+					});
+				}
+			});
 		}
 	});
 </script>

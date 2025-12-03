@@ -14,7 +14,7 @@
 <div class="container mx-auto max-w-4xl p-6">
 	<!-- Header -->
 	<div class="mb-8">
-		<Button variant="ghost" size="sm" href="/organization/sites" class="mb-4">
+		<Button variant="ghost" size="sm" href="/sites" class="mb-4">
 			<ArrowLeftIcon class="mr-2 size-4" />
 			Back to Sites
 		</Button>
