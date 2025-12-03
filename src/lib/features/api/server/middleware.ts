@@ -19,9 +19,15 @@ export function getBearerToken(request: Request) {
  * Credit-related functionality has been removed.
  */
 
+export type RateLimitInfo = {
+	limit: number;
+	remaining: number;
+	reset: number;
+};
+
 export async function withAuth(
 	event: RequestEvent<Record<string, string>>,
-	handler: (orgId: string, siteId: string, apiKeyId: string) => Promise<Response>
+	handler: (orgId: string, siteId: string, apiKeyId: string, rateLimitInfo: RateLimitInfo) => Promise<Response>
 ): Promise<Response> {
 	const logger = createContextLogger('api-middleware');
 	const operation = logger.start('Authenticate API request', {
@@ -256,5 +262,18 @@ export async function withAuth(
 			.then(() => analytics.shutdown())
 	);
 
-	return handler(orgId, siteId, apiKeyId);
+	// Extract rate limit information from the verified API key
+	const rateLimitInfo: RateLimitInfo = {
+		limit: response.key?.rateLimitMax ?? 100,
+		remaining: response.key?.remaining ?? 100,
+		reset: response.key?.lastRequest
+			? Math.floor(
+					(new Date(response.key.lastRequest).getTime() +
+						(response.key?.rateLimitTimeWindow ?? 60000)) /
+						1000
+				)
+			: Math.floor(Date.now() / 1000) + 60
+	};
+
+	return handler(orgId, siteId, apiKeyId, rateLimitInfo);
 }

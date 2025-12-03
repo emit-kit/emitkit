@@ -5,6 +5,8 @@ import { getOrCreateChannel } from '$lib/features/channels/server/repository';
 import { withAuth } from '$lib/features/api/server/middleware';
 import { z } from 'zod';
 import { createContextLogger } from '$lib/server/logger';
+import { redis } from '$lib/server/redis';
+import { waitUntil } from '$lib/server/wait-until';
 
 const jsonValueSchema: z.ZodType<
 	string | number | boolean | null | Array<unknown> | Record<string, unknown>
@@ -35,8 +37,36 @@ const createEventSchema = z.object({
 export const POST: RequestHandler = async (event) => {
 	const logger = createContextLogger('api-events');
 
-	return withAuth(event, async (orgId, siteId, apiKeyId) => {
+	return withAuth(event, async (orgId, siteId, apiKeyId, rateLimitInfo) => {
 		try {
+			// Check for idempotency key
+			const idempotencyKey = event.request.headers.get('Idempotency-Key');
+
+			if (idempotencyKey) {
+				// Check if we've already processed this request
+				const cacheKey = `idempotency:${orgId}:${idempotencyKey}`;
+				const cachedResponse = await redis.get(cacheKey);
+
+				if (cachedResponse) {
+					logger.info('Idempotent request replay', {
+						idempotencyKey,
+						organizationId: orgId
+					});
+
+					// Parse and return cached response
+					const cached = JSON.parse(cachedResponse as string);
+					return json(cached.body, {
+						status: cached.status,
+						headers: {
+							'X-RateLimit-Limit': String(rateLimitInfo.limit),
+							'X-RateLimit-Remaining': String(rateLimitInfo.remaining),
+							'X-RateLimit-Reset': String(rateLimitInfo.reset),
+							'X-Idempotent-Replay': 'true'
+						}
+					});
+				}
+			}
+
 			// Parse and validate the request body
 			const body = await event.request.json();
 			const validatedData = createEventSchema.parse(body);
@@ -63,19 +93,47 @@ export const POST: RequestHandler = async (event) => {
 				source: validatedData.source ?? 'api'
 			});
 
-			return json(
-				{
-					success: true,
-					data: {
-						id: createdEvent.id,
-						channelId: channel.id,
-						channelName: channel.name,
-						title: createdEvent.title,
-						createdAt: createdEvent.createdAt.toISOString()
-					}
+			const responseBody = {
+				success: true,
+				data: {
+					id: createdEvent.id,
+					channelId: channel.id,
+					channelName: channel.name,
+					title: createdEvent.title,
+					createdAt: createdEvent.createdAt.toISOString()
 				},
-				{ status: 201 }
-			);
+				requestId: event.locals.requestId
+			};
+
+			// Cache idempotent response if idempotency key was provided
+			if (idempotencyKey) {
+				const cacheKey = `idempotency:${orgId}:${idempotencyKey}`;
+				const cacheValue = JSON.stringify({
+					body: responseBody,
+					status: 201
+				});
+
+				// Cache for 24 hours
+				waitUntil(
+					redis
+						.set(cacheKey, cacheValue, { ex: 86400 })
+						.catch((error) =>
+							logger.error('Failed to cache idempotent response', error instanceof Error ? error : undefined, {
+								idempotencyKey,
+								organizationId: orgId
+							})
+						)
+				);
+			}
+
+			return json(responseBody, {
+				status: 201,
+				headers: {
+					'X-RateLimit-Limit': String(rateLimitInfo.limit),
+					'X-RateLimit-Remaining': String(rateLimitInfo.remaining),
+					'X-RateLimit-Reset': String(rateLimitInfo.reset)
+				}
+			});
 		} catch (error) {
 			logger.error('Error creating event via API', error instanceof Error ? error : undefined, {
 				organizationId: orgId,
@@ -88,9 +146,17 @@ export const POST: RequestHandler = async (event) => {
 					{
 						success: false,
 						error: 'Validation error',
-						details: error.issues
+						details: error.issues,
+						requestId: event.locals.requestId
 					},
-					{ status: 400 }
+					{
+						status: 400,
+						headers: {
+							'X-RateLimit-Limit': String(rateLimitInfo.limit),
+							'X-RateLimit-Remaining': String(rateLimitInfo.remaining),
+							'X-RateLimit-Reset': String(rateLimitInfo.reset)
+						}
+					}
 				);
 			}
 
@@ -98,9 +164,17 @@ export const POST: RequestHandler = async (event) => {
 			return json(
 				{
 					success: false,
-					error: 'Failed to create event'
+					error: 'Failed to create event',
+					requestId: event.locals.requestId
 				},
-				{ status: 500 }
+				{
+					status: 500,
+					headers: {
+						'X-RateLimit-Limit': String(rateLimitInfo.limit),
+						'X-RateLimit-Remaining': String(rateLimitInfo.remaining),
+						'X-RateLimit-Reset': String(rateLimitInfo.reset)
+					}
+				}
 			);
 		}
 	});

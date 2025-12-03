@@ -17,6 +17,7 @@ declare global {
 			activeOrganizationMember?: LocalMember;
 			getSession: AuthConfig['api']['getSession'];
 			authContext?: AuthContext;
+			requestId?: string;
 		}
 		interface PageData {
 			orgId: string;

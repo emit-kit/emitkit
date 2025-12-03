@@ -4,7 +4,8 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { createContextLogger } from '$lib/server/logger';
+import { createContextLogger, setRequestId } from '$lib/server/logger';
+import { randomUUID } from 'crypto';
 
 // ============================================================================
 // Utilities
@@ -102,6 +103,17 @@ async function ensureActiveOrganization(
 // ============================================================================
 // Handlers
 // ============================================================================
+
+/**
+ * Request ID Handler
+ * Generates a unique request ID for each request and stores it in locals.
+ */
+const requestIdHandler: Handle = async ({ event, resolve }) => {
+	const requestId = randomUUID();
+	setRequestId(requestId);
+	event.locals.requestId = requestId;
+	return resolve(event);
+};
 
 /**
  * API Subdomain Handler
@@ -256,8 +268,9 @@ const guardHandler: Handle = async ({ event, resolve }) => {
 
 /**
  * Handler execution order:
- * 1. apiSubdomainHandler - Validates api.emitkit.com requests
- * 2. betterAuthHandler - Sets up session and organization context
- * 3. guardHandler - Enforces authentication requirements
+ * 1. requestIdHandler - Generates unique request ID
+ * 2. apiSubdomainHandler - Validates api.emitkit.com requests
+ * 3. betterAuthHandler - Sets up session and organization context
+ * 4. guardHandler - Enforces authentication requirements
  */
-export const handle = sequence(apiSubdomainHandler, betterAuthHandler, guardHandler);
+export const handle = sequence(requestIdHandler, apiSubdomainHandler, betterAuthHandler, guardHandler);
