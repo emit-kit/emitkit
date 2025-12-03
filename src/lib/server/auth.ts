@@ -247,13 +247,21 @@ export const auth = betterAuth({
 			...(env.VERCEL_BRANCH_URL ? [env.VERCEL_BRANCH_URL] : [])
 		].filter((url): url is string => Boolean(url));
 
-		console.log('Trusted origins base URLs:', baseUrls);
+		// In production, explicitly add all production custom domains
+		if (env.VERCEL_TARGET_ENV === 'production') {
+			baseUrls.push('app.emitkit.com', 'api.emitkit.com');
+		}
+
+		// Remove duplicates
+		const uniqueUrls = [...new Set(baseUrls)];
+
+		console.log('Trusted origins base URLs:', uniqueUrls);
 
 		// Determine protocol based on environment
 		const protocol = import.meta.env.PROD ? 'https://' : 'http://';
 
 		// Generate origins with and without trailing slash
-		const origins = baseUrls.flatMap((url) => [`${protocol}${url}`, `${protocol}${url}/`]);
+		const origins = uniqueUrls.flatMap((url) => [`${protocol}${url}`, `${protocol}${url}/`]);
 
 		return origins;
 	}
