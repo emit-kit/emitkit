@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, timestamp, varchar, json, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, index } from 'drizzle-orm/pg-core';
 import { createBetterAuthId } from './utils';
 import { organization } from './auth';
 import { channel } from './channel';

@@ -2,10 +2,6 @@ import { createBetterAuthId } from './utils';
 import { relations } from 'drizzle-orm';
 import { pgTable, text, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
 
-// Retention tier enum for event retention policies
-// - basic: 90 days (lowest plan)
-// - premium: 365 days (middle plan)
-// - unlimited: no retention limit (highest plan)
 export const retentionTierEnum = pgEnum('retention_tier', ['basic', 'premium', 'unlimited']);
 
 export const user = pgTable('user', {
