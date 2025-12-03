@@ -12,6 +12,12 @@ const betterAuthHandler: Handle = async ({ event, resolve }) => {
 	event.locals.getSession = auth.api.getSession;
 	event.locals.auth = auth;
 
+	// For API subdomain requests (api.emitkit.com), skip session/org logic - authentication handled by API key middleware
+	const host = event.request.headers.get('host');
+	if (host?.startsWith('api.')) {
+		return resolve(event);
+	}
+
 	// For Better Auth API routes, skip session/org logic and let svelteKitHandler handle it directly
 	if (event.url.pathname.startsWith('/api/auth')) {
 		return svelteKitHandler({ event, resolve, auth, building });
@@ -151,6 +157,12 @@ const betterAuthHandler: Handle = async ({ event, resolve }) => {
 
 const guardHandler: Handle = async ({ event, resolve }) => {
 	const logger = createContextLogger('guard-handler');
+
+	// Allow API subdomain requests (api.emitkit.com) - authentication handled by route-specific middleware
+	const host = event.request.headers.get('host');
+	if (host?.startsWith('api.')) {
+		return resolve(event);
+	}
 
 	// Allow auth routes to be accessible without session
 	if (event.url.pathname.startsWith('/auth')) {
