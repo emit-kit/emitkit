@@ -6,6 +6,62 @@ import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import { createContextLogger } from '$lib/server/logger';
 
+/**
+ * API Subdomain Handler
+ * Handles requests from api.emitkit.com and rewrites them to /api/* routes
+ */
+const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
+	const logger = createContextLogger('api-subdomain-handler');
+	const host = event.request.headers.get('host');
+
+	// Only process requests from api.emitkit.com
+	if (!host?.startsWith('api.')) {
+		return resolve(event);
+	}
+
+	const originalPath = event.url.pathname;
+
+	// Only allow /v1/* paths on the API subdomain
+	if (!originalPath.startsWith('/v1/')) {
+		logger.warn('Invalid API subdomain path', {
+			host,
+			path: originalPath
+		});
+
+		return new Response(
+			JSON.stringify({
+				error: 'Not Found',
+				message: 'Invalid API endpoint. Only /v1/* paths are supported.'
+			}),
+			{
+				status: 404,
+				headers: { 'Content-Type': 'application/json' }
+			}
+		);
+	}
+
+	// Rewrite /v1/* to /api/v1/*
+	const rewrittenPath = `/api${originalPath}`;
+
+	logger.info('Rewriting API subdomain request', {
+		host,
+		originalPath,
+		rewrittenPath
+	});
+
+	// Create a new URL with the rewritten path
+	const rewrittenUrl = new URL(event.url);
+	rewrittenUrl.pathname = rewrittenPath;
+
+	// Create a new request with the rewritten URL
+	const rewrittenRequest = new Request(rewrittenUrl, event.request);
+
+	// Use fetch to internally call the rewritten route
+	const response = await event.fetch(rewrittenRequest);
+
+	return response;
+};
+
 const betterAuthHandler: Handle = async ({ event, resolve }) => {
 	const logger = createContextLogger('auth-handler');
 
@@ -211,4 +267,4 @@ const guardHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(betterAuthHandler, guardHandler);
+export const handle = sequence(apiSubdomainHandler, betterAuthHandler, guardHandler);
