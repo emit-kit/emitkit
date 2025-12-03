@@ -32,7 +32,40 @@ export const auth = betterAuth({
 		schema: schema
 	}),
 	emailAndPassword: {
-		enabled: true
+		enabled: true,
+		sendResetPassword(data, request) {}
+	},
+	emailVerification: {
+		sendVerificationEmail: async ({ user, url }) => {
+			const operation = logger.start('Send verification email', {
+				email: user.email
+			});
+
+			try {
+				const { emailService, ConfirmSubscriptionEmail } = await import(
+					'$lib/features/email/server/index.js'
+				);
+
+				await emailService.sendEmail({
+					to: user.email,
+					subject: 'Verify your email address',
+					component: ConfirmSubscriptionEmail,
+					props: {
+						verifyEmailURL: url,
+						newsletterName: siteConfig.appName
+					}
+				});
+
+				operation.end({ sent: true });
+			} catch (error) {
+				operation.error('Failed to send verification email', error, {
+					email: user.email
+				});
+				// Don't throw - we don't want to break auth flow
+			}
+		},
+		sendOnSignUp: false,
+		autoSignInAfterVerification: true
 	},
 	advanced: {
 		database: {
@@ -78,9 +111,32 @@ export const auth = betterAuth({
 		// twoFactor(),
 		magicLink({
 			async sendMagicLink(data) {
-				logger.info('Sending magic link', {
-					url: data.url
+				const operation = logger.start('Send magic link email', {
+					email: data.email
 				});
+
+				try {
+					const { emailService, MagicLoginLink } = await import(
+						'$lib/features/email/server/index.js'
+					);
+
+					await emailService.sendEmail({
+						to: data.email,
+						subject: `Sign in to ${siteConfig.appName}`,
+						component: MagicLoginLink,
+						props: {
+							email: data.email,
+							url: data.url
+						}
+					});
+
+					operation.end({ sent: true });
+				} catch (error) {
+					operation.error('Failed to send magic link email', error, {
+						email: data.email
+					});
+					// Don't throw - we don't want to break auth flow
+				}
 			}
 		})
 		// lastLoginMethod()
