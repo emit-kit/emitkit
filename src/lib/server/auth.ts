@@ -159,21 +159,15 @@ export const auth = betterAuth({
 			}
 		}
 	},
-	trustedOrigins(request) {
-		logger.info('Getting trusted origins for request', {
-			host: request.headers.get('host'),
-			origin: request.headers.get('origin')
-		});
-
-		const origins = [
-			`https://${VERCEL_URL}`,
-			...(env.VERCEL_PROJECT_PRODUCTION_URL
-				? [`https://${env.VERCEL_PROJECT_PRODUCTION_URL}`]
-				: []),
-			...(env.VERCEL_BRANCH_URL ? [`https://${env.VERCEL_BRANCH_URL}`] : [])
+	trustedOrigins() {
+		const baseUrls: string[] = [
+			VERCEL_URL,
+			...(env.VERCEL_PROJECT_PRODUCTION_URL ? [env.VERCEL_PROJECT_PRODUCTION_URL] : []),
+			...(env.VERCEL_BRANCH_URL ? [env.VERCEL_BRANCH_URL] : [])
 		];
 
-		logger.info('Trusted origins', { origins });
+		// Generate origins with and without trailing slash
+		const origins = baseUrls.flatMap((url) => [`https://${url}`, `https://${url}/`]);
 
 		return origins;
 	}
