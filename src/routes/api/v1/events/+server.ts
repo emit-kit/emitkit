@@ -40,7 +40,11 @@ export const POST: RequestHandler = async (event) => {
 
 	return withAuth(event, async (orgId, siteId, apiKeyId, rateLimitInfo) => {
 		try {
-			// Check for idempotency key
+			// Parse and validate the request body FIRST (can only be read once)
+			const body = await event.request.json();
+			const validatedData = createEventSchema.parse(body);
+
+			// Check for idempotency key AFTER parsing body
 			const idempotencyKey = event.request.headers.get('Idempotency-Key');
 
 			if (idempotencyKey) {
@@ -51,7 +55,8 @@ export const POST: RequestHandler = async (event) => {
 				if (cachedResponse) {
 					logger.info('Idempotent request replay', {
 						idempotencyKey,
-						organizationId: orgId
+						organizationId: orgId,
+						channelName: validatedData.channelName
 					});
 
 					// Parse and return cached response
@@ -67,10 +72,6 @@ export const POST: RequestHandler = async (event) => {
 					});
 				}
 			}
-
-			// Parse and validate the request body
-			const body = await event.request.json();
-			const validatedData = createEventSchema.parse(body);
 
 			// Get or create the channel within the site
 			const channel = await getOrCreateChannel(validatedData.channelName, siteId, orgId, {
@@ -127,19 +128,25 @@ export const POST: RequestHandler = async (event) => {
 					status: 201
 				});
 
-				// Cache for 24 hours
-				waitUntil(
-					redis.set(cacheKey, cacheValue, { ex: 86400 }).catch((error) =>
-						logger.error(
-							'Failed to cache idempotent response',
-							error instanceof Error ? error : undefined,
-							{
-								idempotencyKey,
-								organizationId: orgId
-							}
-						)
-					)
-				);
+				// Cache for 24 hours - MUST await to prevent race conditions
+				try {
+					await redis.set(cacheKey, cacheValue, { ex: 86400 });
+					logger.info('Cached idempotent response', {
+						idempotencyKey,
+						organizationId: orgId,
+						channelName: validatedData.channelName
+					});
+				} catch (error) {
+					// Log error but don't fail the request if caching fails
+					logger.error(
+						'Failed to cache idempotent response',
+						error instanceof Error ? error : undefined,
+						{
+							idempotencyKey,
+							organizationId: orgId
+						}
+					);
+				}
 			}
 
 			return json(responseBody, {
