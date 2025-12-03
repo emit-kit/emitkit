@@ -117,8 +117,8 @@ const requestIdHandler: Handle = async ({ event, resolve }) => {
 
 /**
  * API Subdomain Handler
- * Validates requests from api.emitkit.com and ensures only /v1/* paths are allowed.
- * Actual routes must exist at /v1/* (e.g., /v1/events/+server.ts)
+ * Validates requests from api.emitkit.com and ensures only /v1/* and /api/* paths are allowed.
+ * Actual routes must exist at /v1/* (e.g., /v1/events/+server.ts) or /api/* (e.g., /api/openapi.json)
  */
 const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 	const host = event.request.headers.get('host');
@@ -129,8 +129,8 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 
 	const pathname = event.url.pathname;
 
-	// Only allow /v1/* paths on the API subdomain
-	if (!pathname.startsWith('/v1/')) {
+	// Allow /v1/* (API endpoints) and /api/* (OpenAPI spec, docs, etc.)
+	if (!pathname.startsWith('/v1/') && !pathname.startsWith('/api/')) {
 		const logger = createContextLogger('api-subdomain-handler');
 		logger.warn('Invalid API subdomain path', { host, path: pathname });
 
