@@ -1,0 +1,44 @@
+meta {
+  name: Create Event - Full Example
+  type: http
+  seq: 2
+  tags: [
+    events
+    v1
+    full
+  ]
+}
+
+post {
+  url: {{api_url}}/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{api_key}}
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "channelName": "feature-releases",
+    "title": "New Feature Released",
+    "description": "We've just released a new feature that allows users to export their data",
+    "icon": "🚀",
+    "tags": ["feature", "release", "export"],
+    "metadata": {
+      "featureName": "Data Export",
+      "version": "2.5.0",
+      "affectedUsers": 1250,
+      "releaseDate": "2025-01-15"
+    },
+    "userId": "user_123",
+    "notify": true,
+    "displayAs": "notification",
+    "source": "release-pipeline"
+  }
+}

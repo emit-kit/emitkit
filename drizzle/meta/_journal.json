@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1762874538669,
+      "tag": "0000_typical_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764663672203,
+      "tag": "0001_flowery_invisible_woman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764665447398,
+      "tag": "0002_previous_mac_gargan",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1764665988049,
+      "tag": "0003_bitter_scream",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1764666739947,
+      "tag": "0004_wet_switch",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1764682142703,
+      "tag": "0005_powerful_lady_deathstrike",
+      "breakpoints": true
+    }
+  ]
+}

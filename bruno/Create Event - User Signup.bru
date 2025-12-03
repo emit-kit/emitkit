@@ -1,0 +1,43 @@
+meta {
+  name: Create Event - User Signup
+  type: http
+  seq: 5
+  tags: [
+    events
+    v1
+    signup
+  ]
+}
+
+post {
+  url: {{api_url}}/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{api_key}}
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "channelName": "user-signups",
+    "title": "New User Registered",
+    "description": "A new user has signed up for your application",
+    "icon": "👋",
+    "tags": ["signup", "onboarding", "new-user"],
+    "metadata": {
+      "email": "user@example.com",
+      "plan": "free",
+      "source": "organic",
+      "referrer": "google"
+    },
+    "userId": "user_456",
+    "notify": true,
+    "displayAs": "message"
+  }
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Create Event - Basic
+  type: http
+  seq: 1
+  tags: [
+    events
+    v1
+  ]
+}
+
+post {
+  url: {{api_url}}/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{api_key}}
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "channelName": "general",
+    "title": "{{$randomPhrase}}",
+    "description": "This is a test event",
+    "icon": "📝",
+    "notify": true
+  }
+}

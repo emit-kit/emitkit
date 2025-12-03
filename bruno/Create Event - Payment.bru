@@ -1,0 +1,44 @@
+meta {
+  name: Create Event - Payment Example
+  type: http
+  seq: 3
+  tags: [
+    events
+    v1
+    payment
+  ]
+}
+
+post {
+  url: {{api_url}}/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{api_key}}
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "channelName": "payments",
+    "title": "Payment Received",
+    "description": "User upgraded to Pro plan",
+    "icon": "💰",
+    "tags": ["payment", "upgrade"],
+    "metadata": {
+      "amount": 99.99,
+      "currency": "USD",
+      "plan": "pro",
+      "userId": "user_123",
+      "transactionId": "txn_abc123"
+    },
+    "userId": "user_123",
+    "notify": true,
+    "displayAs": "notification"
+  }
+}
