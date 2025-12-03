@@ -291,17 +291,13 @@ export const handle = sequence(
  * actual route files organized in /src/routes/api/v1/*.
  */
 export const reroute: Reroute = ({ url }) => {
-	const host = url.hostname;
+	const pathname = url.pathname;
 
-	// Only reroute for api subdomain (api.emitkit.com or api.localhost)
-	if (host.startsWith('api.')) {
-		const pathname = url.pathname;
-
-		// Rewrite /v1/* to /api/v1/*
-		if (pathname.startsWith('/v1/')) {
-			return pathname.replace(/^\/v1\//, '/api/v1/');
-		}
+	// Only reroute /v1/* paths to /api/v1/*
+	// The apiSubdomainHandler will ensure this only happens on api.emitkit.com
+	if (pathname.startsWith('/v1/')) {
+		return pathname.replace(/^\/v1\//, '/api/v1/');
 	}
 
-	return url.pathname;
+	return pathname;
 };
