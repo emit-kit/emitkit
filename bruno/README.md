@@ -2,8 +2,24 @@
 
 Bruno API collection for testing the EmitKit Events API v1.
 
+## OpenAPI Specification
+
+The complete API specification is available in OpenAPI 3.1 format:
+
+- **JSON Format**: [http://localhost:5173/api/openapi.json](http://localhost:5173/api/openapi.json)
+- **YAML Format**: [http://localhost:5173/api/openapi.yaml](http://localhost:5173/api/openapi.yaml)
+- **Source File**: [`../openapi/openapi.yaml`](../openapi/openapi.yaml)
+
+Use these URLs with tools like:
+- **Mintlify** (Auto-import for documentation)
+- **Postman** (Import → Link)
+- **Insomnia** (Import → URL)
+- **SDK Generators** (e.g., `@hey-api/openapi-ts`)
+- **API Testing tools**
+
 ## Table of Contents
 
+- [OpenAPI Specification](#openapi-specification)
 - [Setup](#setup)
 - [Environments](#environments)
 - [Available Requests](#available-requests)
@@ -11,6 +27,7 @@ Bruno API collection for testing the EmitKit Events API v1.
 - [Authentication](#authentication)
 - [Channel Auto-Creation](#channel-auto-creation)
 - [Rate Limiting](#rate-limiting)
+- [Idempotency](#idempotency)
 - [Best Practices](#best-practices)
 - [Migration from v0 API](#migration-from-v0-api)
 
@@ -270,6 +287,39 @@ API keys have built-in rate limiting:
 - Rate limits are configurable per API key
 - When rate limited, you'll receive a `429 Too Many Requests` response
 
+**Rate limit information is returned in response headers:**
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1733270400
+```
+
+## Idempotency
+
+To prevent duplicate events from retries or webhook replays, include an `Idempotency-Key` header:
+
+```bash
+curl -X POST https://api.emitkit.com/v1/events \
+  -H "Authorization: Bearer blip_xxxxx" \
+  -H "Idempotency-Key: payment-123-retry-1" \
+  -H "Content-Type: application/json" \
+  -d '{"channelName": "payments", "title": "Payment Received"}'
+```
+
+**How it works:**
+
+- First request with a key: Event created, response cached for 24 hours
+- Subsequent requests with same key: Returns cached response immediately
+- Cached responses include `X-Idempotent-Replay: true` header
+- Idempotency keys are scoped to your organization
+
+**When to use:**
+
+- Payment webhooks (prevent double-charging)
+- Network retry logic (safe retries)
+- Webhook replays from third-party services
+
 ## Best Practices
 
 1. **Channel Names**: Use consistent, kebab-case names (e.g., `user-signups`, `payment-received`)
@@ -284,7 +334,7 @@ API keys have built-in rate limiting:
 
 4. **Error Handling**: Always check the `success` field in responses
 
-5. **Idempotency**: Events are not idempotent - each request creates a new event
+5. **Request IDs**: Every response includes a `requestId` field - save this for debugging and support tickets
 
 ## Migration from v0 API
 
