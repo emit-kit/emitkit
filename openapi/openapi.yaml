@@ -46,7 +46,7 @@ info:
 servers:
   - url: https://api.emitkit.com
     description: Production API
-  - url: http://localhost:5173/api
+  - url: http://localhost:5173
     description: Local Development
 
 security:
@@ -61,7 +61,7 @@ tags:
     description: API metadata and health checks
 
 paths:
-  /v1/events:
+  /api/v1/events:
     post:
       summary: Create Event
       description: |
@@ -285,7 +285,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServerError'
 
-  /v1/identify:
+  /api/v1/identify:
     post:
       summary: Identify User
       description: |
@@ -579,7 +579,7 @@ components:
           description: |
             Optional user identifier to associate with this event.
             Supports both direct user IDs and aliases (email, username, etc.)
-            created via the /v1/identify endpoint. Aliases are automatically
+            created via the /api/v1/identify endpoint. Aliases are automatically
             resolved to canonical user IDs.
           example: user_123
 
