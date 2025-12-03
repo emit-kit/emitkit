@@ -58,12 +58,17 @@ const apiSubdomainHandler: Handle = async ({ event, resolve }) => {
 		rewrittenPath
 	});
 
-	// Create a new URL with the rewritten path
+	// Create a new URL with the rewritten path and change host to avoid re-processing
 	const rewrittenUrl = new URL(event.url);
 	rewrittenUrl.pathname = rewrittenPath;
+	rewrittenUrl.host = event.url.host.replace(/^api\./, 'app.');
 
 	// Create a new request with the rewritten URL
-	const rewrittenRequest = new Request(rewrittenUrl, event.request);
+	const rewrittenRequest = new Request(rewrittenUrl, {
+		method: event.request.method,
+		headers: event.request.headers,
+		body: event.request.body
+	});
 
 	// Use fetch to internally call the rewritten route
 	const response = await event.fetch(rewrittenRequest);
