@@ -4,7 +4,7 @@ import {
 	inferAdditionalFields,
 	multiSessionClient,
 	organizationClient,
-	magicLinkClient
+	emailOTPClient
 } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/svelte';
 import type { AuthConfig } from '$lib/server/auth';
@@ -14,7 +14,7 @@ const baseAuthClient = createAuthClient({
 	plugins: [
 		inferAdditionalFields<AuthConfig>(),
 		adminClient(),
-		magicLinkClient(),
+		emailOTPClient(),
 		organizationClient({
 			ac, // Pass access control to client
 			roles: {

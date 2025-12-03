@@ -39,7 +39,7 @@
 
 <Toaster />
 
-<AuthUIProvider {authClient} credentials={true} magicLink={true} {toast}>
+<AuthUIProvider {authClient} credentials={true} emailOTP={true} {toast}>
 	<ModalStackProvider>
 		{@render children()}
 	</ModalStackProvider>
