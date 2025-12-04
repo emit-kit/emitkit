@@ -14,18 +14,26 @@
 
 	// Fetch events when params change
 	$effect(() => {
-		if (params.channel_id && data.orgId) {
+		const currentChannelId = params.channel_id;
+		const currentOrgId = data.orgId;
+
+		if (currentChannelId && currentOrgId) {
 			isLoading = true;
+			loadedEventIds.clear();
+			allEvents = [];
+
 			getEventsListQuery({
-				channelId: params.channel_id,
-				organizationId: data.orgId,
+				channelId: currentChannelId,
+				organizationId: currentOrgId,
 				limit: 20,
 				page: 1
 			}).then((result) => {
 				query = result;
-				// Update event lists
 				loadedEventIds = new Set(result.items.map((event) => event.id));
 				allEvents = result.items;
+				isLoading = false;
+			}).catch((error) => {
+				console.error('Failed to load events:', error);
 				isLoading = false;
 			});
 		}
@@ -173,12 +181,14 @@
 
 	// Setup SSE connection reactively when params change
 	$effect(() => {
-		if (!params.site_id || !params.channel_id) return;
+		const currentSiteId = params.site_id;
+		const currentChannelId = params.channel_id;
 
-		// Record when the component mounted
+		if (!currentSiteId || !currentChannelId) return;
+
 		mountTime = Date.now();
 
-		const eventSource = new EventSource(`/events/${params.site_id}/${params.channel_id}/stream`);
+		const eventSource = new EventSource(`/events/${currentSiteId}/${currentChannelId}/stream`);
 
 		eventSource.addEventListener('message', async (e) => {
 			const message = JSON.parse(e.data);

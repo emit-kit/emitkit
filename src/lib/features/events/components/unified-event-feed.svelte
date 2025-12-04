@@ -42,17 +42,22 @@
 	};
 
 	// Track loaded event IDs to prevent duplicates
-	let loadedEventIds = new Set<string>(initialEvents.items.map((event) => event.id));
+	let loadedEventIds = new Set<string>();
 
 	// Initialize with server-loaded events (not marked as new)
-	let allEvents = $state<EventWithNewStatus[]>(initialEvents.items);
+	let allEvents = $state<EventWithNewStatus[]>([]);
 
-	// Create maps for channel and site lookups
-	const siteMap = new Map<string, Site>();
-	sites.forEach((site) => siteMap.set(site.id, site));
+	// React to initialEvents prop changes (when navigating back to home page)
+	$effect(() => {
+		if (initialEvents && initialEvents.items) {
+			loadedEventIds = new Set(initialEvents.items.map((event) => event.id));
+			allEvents = initialEvents.items;
+		}
+	});
 
-	const channelMap = new Map<string, Channel>();
-	channels.forEach((channel) => channelMap.set(channel.id, channel));
+	// Create maps for channel and site lookups (reactive to prop changes)
+	const siteMap = $derived(new Map(sites.map((site) => [site.id, site])));
+	const channelMap = $derived(new Map(channels.map((channel) => [channel.id, channel])));
 
 	// Handle event deletion
 	function handleEventDeleted(eventId: string) {
