@@ -1,5 +1,5 @@
 import { db, schema, type Channel, type ChannelInsert, type ChannelUpdate } from '$lib/server/db';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import {
 	buildPaginatedQuery,
 	type PaginatedQueryResult,
@@ -146,19 +146,19 @@ export async function listChannelsBySite(
 	const limit = pagination?.limit || 20;
 	const offset = (page - 1) * limit;
 
-	// Build the main query
+	// Build the main query - exclude soft-deleted channels
 	const query = db.query.channel.findMany({
-		where: eq(schema.channel.siteId, siteId),
+		where: and(eq(schema.channel.siteId, siteId), isNull(schema.channel.deletedAt)),
 		orderBy: (channels, { desc }) => [desc(channels.createdAt)],
 		limit,
 		offset
 	});
 
-	// Build the count query
+	// Build the count query - exclude soft-deleted channels
 	const countQuery = db
 		.select({ count: sql<number>`count(*)` })
 		.from(schema.channel)
-		.where(eq(schema.channel.siteId, siteId));
+		.where(and(eq(schema.channel.siteId, siteId), isNull(schema.channel.deletedAt)));
 
 	// Execute both queries and build paginated result
 	const result = await buildPaginatedQuery(query, countQuery, { page, limit });

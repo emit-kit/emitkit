@@ -16,11 +16,13 @@ import { build, files, version } from '$service-worker';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
-// Declare deployment ID injected by Vite
-declare const __DEPLOYMENT_ID__: string;
+// Declare deployment ID injected by Vite (may not be available in service worker context)
+declare const __DEPLOYMENT_ID__: string | undefined;
 
 // Cache name includes both SvelteKit version and deployment ID for proper cache busting
-const CACHE_NAME = `cache-${version}-${__DEPLOYMENT_ID__}`;
+// Falls back to timestamp if __DEPLOYMENT_ID__ is not available
+const DEPLOYMENT_ID = typeof __DEPLOYMENT_ID__ !== 'undefined' ? __DEPLOYMENT_ID__ : `dev-${Date.now()}`;
+const CACHE_NAME = `cache-${version}-${DEPLOYMENT_ID}`;
 const ASSETS = [...build, ...files];
 
 /**

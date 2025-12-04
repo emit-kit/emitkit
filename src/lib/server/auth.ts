@@ -276,8 +276,6 @@ export const auth = betterAuth({
 		// Remove duplicates
 		const uniqueUrls = [...new Set(baseUrls)];
 
-		console.log('Trusted origins base URLs:', uniqueUrls);
-
 		// Determine protocol based on environment
 		const protocol = import.meta.env.PROD ? 'https://' : 'http://';
 

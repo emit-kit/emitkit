@@ -20,12 +20,14 @@ export const site = pgTable(
 		slug: t.varchar('slug', { length: 255 }).notNull(),
 		icon: t.varchar('icon', { length: 50 }),
 		description: t.text('description'),
+		deletedAt: t.timestamp('deleted_at'),
 		createdAt: t.timestamp('created_at').notNull().defaultNow(),
 		updatedAt: t.timestamp('updated_at').notNull().defaultNow()
 	}),
 	(table) => ({
 		uniqueOrgSlug: unique().on(table.organizationId, table.slug),
-		idxOrg: index('idx_sites_org').on(table.organizationId)
+		idxOrg: index('idx_sites_org').on(table.organizationId),
+		idxDeleted: index('idx_sites_deleted').on(table.deletedAt)
 	})
 );
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { command, query } from '$app/server';
+import { command, form, query } from '$app/server';
 import { siteCreateSchema, siteUpdateSchema, siteListParamsSchema } from './validators';
 import * as siteRepo from './server/repository';
 import * as siteService from './server/service';
@@ -9,6 +9,13 @@ const logger = createLogger('sites-remote');
 
 export const listSitesQuery = query(siteListParamsSchema, async (input) => {
 	return await siteRepo.listSitesByOrg(input.organizationId, {
+		page: input.page,
+		limit: input.limit
+	});
+});
+
+export const listDeletedSitesQuery = query(siteListParamsSchema, async (input) => {
+	return await siteRepo.listDeletedSitesByOrg(input.organizationId, {
 		page: input.page,
 		limit: input.limit
 	});
@@ -69,6 +76,27 @@ export const updateSiteCommand = command(updateSiteSchema, async (input) => {
 	}
 });
 
+const updateSiteFormSchema = z.object({
+	siteId: z.string(),
+	organizationId: z.string(),
+	name: z.string().min(1, 'Site name is required').max(255, 'Site name is too long')
+});
+
+export const updateSiteForm = form(updateSiteFormSchema, async (input) => {
+	try {
+		return await siteService.updateSite(input.siteId, input.organizationId, {
+			name: input.name
+		});
+	} catch (error) {
+		logger.error('Form submission failed', error as Error, {
+			action: 'updateSite',
+			siteId: input.siteId,
+			organizationId: input.organizationId
+		});
+		throw error;
+	}
+});
+
 const deleteSiteSchema = z.object({
 	siteId: z.string(),
 	organizationId: z.string()
@@ -81,6 +109,25 @@ export const deleteSiteCommand = command(deleteSiteSchema, async (input) => {
 	} catch (error) {
 		logger.error('Command failed', error as Error, {
 			action: 'deleteSite',
+			siteId: input.siteId,
+			organizationId: input.organizationId
+		});
+		throw error;
+	}
+});
+
+const restoreSiteSchema = z.object({
+	siteId: z.string(),
+	organizationId: z.string()
+});
+
+export const restoreSiteCommand = command(restoreSiteSchema, async (input) => {
+	try {
+		await siteService.restoreSite(input.siteId, input.organizationId);
+		return { success: true };
+	} catch (error) {
+		logger.error('Command failed', error as Error, {
+			action: 'restoreSite',
 			siteId: input.siteId,
 			organizationId: input.organizationId
 		});

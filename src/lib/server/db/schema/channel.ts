@@ -24,12 +24,14 @@ export const channel = pgTable(
 		name: t.varchar('name', { length: 255 }).notNull(),
 		icon: t.varchar('icon', { length: 50 }),
 		description: t.text('description'),
+		deletedAt: t.timestamp('deleted_at'),
 		createdAt: t.timestamp('created_at').notNull().defaultNow(),
 		updatedAt: t.timestamp('updated_at').notNull().defaultNow()
 	}),
 	(table) => ({
 		uniqueSiteName: unique().on(table.siteId, table.name),
-		idxSite: index('idx_channels_site').on(table.siteId)
+		idxSite: index('idx_channels_site').on(table.siteId),
+		idxDeleted: index('idx_channels_deleted').on(table.deletedAt)
 	})
 );
 
