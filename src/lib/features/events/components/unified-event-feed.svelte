@@ -1,38 +1,27 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { now, parseAbsoluteToLocal, toCalendarDate } from '@internationalized/date';
-	import type { PageProps } from './$types';
-	import type { EventListItem as EventListItemType } from '$lib/features/events/types.js';
+	import type { Event } from '$lib/server/db/schema';
+	import type { PaginatedResult } from '$lib/features/events/types.js';
 	import EventListItem from '$lib/features/events/components/event-list-item.svelte';
 	import { Wrapper } from '$lib/components/ui/wrapper';
-	import { getEventsListQuery } from '$lib/features/events/events.remote';
+	import type { Site } from '$lib/features/sites/types';
+	import type { Channel } from '$lib/features/channels/types';
 
-	let { params, data }: PageProps = $props();
-
-	// Make query reactive to params changes
-	let query = $state<Awaited<ReturnType<typeof getEventsListQuery>> | null>(null);
-	let isLoading = $state(true);
-
-	// Fetch events when params change
-	$effect(() => {
-		if (params.channel_id && data.orgId) {
-			isLoading = true;
-			getEventsListQuery({
-				channelId: params.channel_id,
-				organizationId: data.orgId,
-				limit: 20,
-				page: 1
-			}).then((result) => {
-				query = result;
-				// Update event lists
-				loadedEventIds = new Set(result.items.map((event) => event.id));
-				allEvents = result.items;
-				isLoading = false;
-			});
-		}
-	});
+	let {
+		initialEvents,
+		sites,
+		channels,
+		organizationId
+	}: {
+		initialEvents: PaginatedResult<Event>;
+		sites: Site[];
+		channels: Channel[];
+		organizationId: string;
+	} = $props();
 
 	// Track which events are "new" (streamed in after page load)
-	type EventWithNewStatus = EventListItemType & {
+	type EventWithNewStatus = Event & {
 		isNew?: boolean;
 		streamedAt?: number; // Timestamp when event was streamed in
 	};
@@ -53,10 +42,17 @@
 	};
 
 	// Track loaded event IDs to prevent duplicates
-	let loadedEventIds = new Set<string>();
+	let loadedEventIds = new Set<string>(initialEvents.items.map((event) => event.id));
 
 	// Initialize with server-loaded events (not marked as new)
-	let allEvents = $state<EventWithNewStatus[]>([]);
+	let allEvents = $state<EventWithNewStatus[]>(initialEvents.items);
+
+	// Create maps for channel and site lookups
+	const siteMap = new Map<string, Site>();
+	sites.forEach((site) => siteMap.set(site.id, site));
+
+	const channelMap = new Map<string, Channel>();
+	channels.forEach((channel) => channelMap.set(channel.id, channel));
 
 	// Handle event deletion
 	function handleEventDeleted(eventId: string) {
@@ -64,9 +60,6 @@
 		allEvents = allEvents.filter((event) => event.id !== eventId);
 		loadedEventIds.delete(eventId);
 	}
-
-	// Track mount time to determine which events are truly new
-	let mountTime = 0;
 
 	/**
 	 * Determine which time group an event belongs to
@@ -171,14 +164,9 @@
 			.filter((g) => g.events.length > 0);
 	});
 
-	// Setup SSE connection reactively when params change
-	$effect(() => {
-		if (!params.site_id || !params.channel_id) return;
 
-		// Record when the component mounted
-		mountTime = Date.now();
-
-		const eventSource = new EventSource(`/events/${params.site_id}/${params.channel_id}/stream`);
+	onMount(() => {
+		const eventSource = new EventSource(`/stream`);
 
 		eventSource.addEventListener('message', async (e) => {
 			const message = JSON.parse(e.data);
@@ -215,7 +203,6 @@
 			});
 		}, 5000); // Check every 5 seconds
 
-		// Cleanup when params change or component unmounts
 		return () => {
 			eventSource.close();
 			clearInterval(interval);
@@ -224,15 +211,30 @@
 </script>
 
 <Wrapper alignment="center">
-	{#if isLoading}
-		<div class="flex items-center justify-center py-12">
-			<div class="flex flex-col items-center gap-3">
-				<div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-				<p class="text-sm text-muted-foreground">Loading events...</p>
+	{#if allEvents.length === 0}
+		<div class="flex flex-col items-center justify-center gap-4 py-12 text-center">
+			<div class="rounded-full bg-muted p-6">
+				<svg
+					class="size-12 text-muted-foreground"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+					/>
+				</svg>
+			</div>
+			<div class="space-y-2">
+				<h3 class="text-lg font-semibold">No events yet</h3>
+				<p class="text-sm text-muted-foreground">
+					Start sending events from your applications to see them here
+				</p>
 			</div>
 		</div>
-	{:else if allEvents.length === 0}
-		<p class="text-muted-foreground">Waiting for events...</p>
 	{:else}
 		<div class="flex w-full max-w-lg flex-col gap-6 overflow-y-auto">
 			{#each groupedEvents as group (group.group)}
@@ -246,12 +248,18 @@
 					<!-- Events in this group -->
 					<div class="flex flex-col gap-3">
 						{#each group.events as event (event.id)}
+							{@const site = siteMap.get(event.siteId)}
+							{@const channel = channelMap.get(event.channelId)}
 							<EventListItem
 								{event}
 								isNew={event.isNew ?? false}
-								channelId={params.channel_id}
-								organizationId={data.orgId}
+								channelId={event.channelId}
+								{organizationId}
 								onDeleted={() => handleEventDeleted(event.id)}
+								siteName={site?.name}
+								siteSlug={site?.slug}
+								channelName={channel?.name}
+								showChannelContext={true}
 							/>
 						{/each}
 					</div>

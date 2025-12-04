@@ -4,7 +4,8 @@ export {
 	listEventsByOrg,
 	getEventsAfter,
 	getEventStats,
-	createEventBatch
+	createEventBatch,
+	deleteEvent
 } from './tinybird.service';
 
 export { createAndBroadcastEvent } from './mutations';

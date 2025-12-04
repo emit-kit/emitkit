@@ -205,6 +205,64 @@ class TinybirdClient {
 
 		return response.json();
 	}
+
+	/**
+	 * Execute a SQL query directly against Tinybird
+	 * Note: Only supports SELECT and DESCRIBE queries
+	 *
+	 * @param sql - SQL query to execute
+	 * @returns Promise with query results
+	 */
+	async executeSQL<T = unknown>(sql: string): Promise<T> {
+		const url = `${this.baseUrl}/v0/sql`;
+
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${this.token}`,
+				'Content-Type': 'application/x-www-form-urlencoded'
+			},
+			body: `q=${encodeURIComponent(sql)}`
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Tinybird SQL execution failed: ${response.status} ${error}`);
+		}
+
+		return response.json();
+	}
+
+	/**
+	 * Delete data from a datasource based on a condition
+	 * Uses the Data Sources API delete endpoint
+	 *
+	 * @param datasourceName - Name of the datasource
+	 * @param deleteCondition - SQL WHERE clause condition (e.g., "id='123' AND org_id='456'")
+	 * @returns Promise with job information
+	 */
+	async deleteData(
+		datasourceName: string,
+		deleteCondition: string
+	): Promise<{ id: string; job_id: string; status: string; delete_condition: string }> {
+		const url = `${this.baseUrl}/v0/datasources/${datasourceName}/delete`;
+
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${this.token}`,
+				'Content-Type': 'application/x-www-form-urlencoded'
+			},
+			body: `delete_condition=${encodeURIComponent(deleteCondition)}`
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Tinybird delete failed: ${response.status} ${error}`);
+		}
+
+		return response.json();
+	}
 }
 
 export const tinybird = new TinybirdClient(TINYBIRD_TOKEN);

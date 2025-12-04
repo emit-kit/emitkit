@@ -1,29 +1,112 @@
 <script lang="ts">
 	import MessageSquareIcon from '@lucide/svelte/icons/bell';
 	import type { EventListItem } from '$lib/features/events/types.js';
-	import AppsIcon from '@lucide/svelte/icons/grid-3x3';
-	import BookIcon from '@lucide/svelte/icons/book';
-	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import GlobeIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+	import HashIcon from '@lucide/svelte/icons/hash';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Command from '$lib/components/ui/command/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { cn } from '$lib/utils/ui.js';
 	import { motion } from '$lib/utils/motion.js';
 	import EventListItemMetadata from './event-list-item-metadata.svelte';
+	import { deleteEventCommand } from '$lib/features/events/events.remote';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
-	let { event, isNew = false }: { event: EventListItem; isNew?: boolean } = $props();
+	let {
+		event,
+		isNew = false,
+		channelId,
+		organizationId,
+		onDeleted,
+		siteName,
+		siteSlug,
+		channelName,
+		showChannelContext = false
+	}: {
+		event: EventListItem;
+		isNew?: boolean;
+		channelId: string;
+		organizationId: string;
+		onDeleted?: () => void;
+		siteName?: string;
+		siteSlug?: string;
+		channelName?: string;
+		showChannelContext?: boolean;
+	} = $props();
 
 	let isFooterExpanded = $state(false);
 	let isDescriptionExpanded = $state(false);
 	const hasMetadata = $derived(event.metadata && Object.keys(event.metadata).length > 0);
 	const descriptionTruncateLength = 60;
 	let scopeMenuOpen = $state(false);
+
+	// Delete confirmation state
+	let deleteConfirmState = $state<'idle' | 'confirming'>('idle');
+	let confirmTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Handle first delete click - enter confirming state
+	function handleDeleteClick() {
+		deleteConfirmState = 'confirming';
+
+		// Auto-reset after 3 seconds
+		if (confirmTimer) clearTimeout(confirmTimer);
+		confirmTimer = setTimeout(() => {
+			deleteConfirmState = 'idle';
+		}, 3000);
+	}
+
+	// Handle confirmed delete - actually delete the event
+	async function handleConfirmDelete() {
+		if (confirmTimer) clearTimeout(confirmTimer);
+
+		try {
+			await deleteEventCommand({
+				eventId: event.id,
+				channelId,
+				organizationId
+			});
+
+			// Reset state first
+			deleteConfirmState = 'idle';
+
+			// Close dropdown
+			scopeMenuOpen = false;
+
+			// Show success toast
+			toast.success('Event deleted', {
+				description: 'The event has been permanently deleted.'
+			});
+
+			// Notify parent to refresh list
+			onDeleted?.();
+		} catch (error) {
+			console.error('Failed to delete event:', error);
+			deleteConfirmState = 'idle';
+
+			// Show error toast
+			toast.error('Failed to delete event', {
+				description: error instanceof Error ? error.message : 'An unexpected error occurred.'
+			});
+		}
+	}
+
+	// Cleanup timer on unmount
+	$effect(() => {
+		return () => {
+			if (confirmTimer) clearTimeout(confirmTimer);
+		};
+	});
+
+	// Navigate to channel view
+	function handleNavigateToChannel() {
+		if (event.siteId && event.channelId) {
+			goto(`/events/${event.siteId}/${event.channelId}`);
+		}
+	}
 </script>
 
 <div
@@ -42,10 +125,10 @@
 		</div>
 
 		<!-- Content -->
-		<div class="flex flex-1 flex-col gap-0">
+		<div class="flex flex-1 flex-col gap-1">
 			<div class="flex items-center gap-2">
 				<span class="text-sm leading-snug font-medium">
-					{event.title} - ID: {event.id.slice(6, 12)}
+					{event.title}
 				</span>
 				{#if isNew}
 					<Badge
@@ -56,6 +139,25 @@
 					</Badge>
 				{/if}
 			</div>
+
+			{#if showChannelContext && (siteName || channelName)}
+				<button
+					onclick={handleNavigateToChannel}
+					class="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+					type="button"
+				>
+					<HashIcon class="size-3" />
+					<span>
+						{#if siteName && channelName}
+							{siteName} / {channelName}
+						{:else if siteName}
+							{siteName}
+						{:else if channelName}
+							{channelName}
+						{/if}
+					</span>
+				</button>
+			{/if}
 			{#if event.description}
 				{#if event.description.length > descriptionTruncateLength && !isDescriptionExpanded}
 					<p class="text-xs text-muted-foreground">
@@ -91,49 +193,35 @@
 				<DropdownMenu.Trigger>
 					{#snippet child({ props })}
 						<Button {...props} size="sm" variant="ghost" class="-mt-4.5 hover:bg-transparent">
-							<GlobeIcon />
+							<EllipsisVerticalIcon />
 							<span class="sr-only"> Actions </span>
 						</Button>
 					{/snippet}
 				</DropdownMenu.Trigger>
 
-				<DropdownMenu.Content side="top" align="end" class="[--radius:1rem]">
-					<DropdownMenu.Group>
-						<DropdownMenu.Item onSelect={(e) => e.preventDefault()}>
-							{#snippet child({ props })}
-								<label for="web-search" {...props}>
-									<GlobeIcon /> Web Search
-									<Switch id="web-search" class="ml-auto" checked />
-								</label>
-							{/snippet}
+				<DropdownMenu.Content side="top" align="end">
+					{#if deleteConfirmState === 'idle'}
+						<DropdownMenu.Item
+							onSelect={(e) => {
+								e.preventDefault();
+								handleDeleteClick();
+							}}
+							class="text-destructive focus:text-destructive"
+						>
+							<Trash2Icon class="size-4" />
+							<span>Delete</span>
 						</DropdownMenu.Item>
-					</DropdownMenu.Group>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Group>
-						<DropdownMenu.Item onSelect={(e) => e.preventDefault()}>
-							{#snippet child({ props })}
-								<label for="apps" {...props}>
-									<AppsIcon /> Apps and Integrations
-									<Switch id="apps" class="ml-auto" checked />
-								</label>
-							{/snippet}
+					{:else}
+						<DropdownMenu.Item
+							onSelect={() => {
+								handleConfirmDelete();
+							}}
+							class="bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive"
+						>
+							<AlertTriangleIcon class="size-4" />
+							<span class="font-semibold">Really delete?</span>
 						</DropdownMenu.Item>
-						<DropdownMenu.Item>
-							<CirclePlusIcon /> All Sources I can access
-						</DropdownMenu.Item>
-						<DropdownMenu.Item>
-							<BookIcon /> Help Center
-						</DropdownMenu.Item>
-					</DropdownMenu.Group>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Group>
-						<DropdownMenu.Item>
-							<PlusIcon /> Connect Apps
-						</DropdownMenu.Item>
-						<DropdownMenu.Label class="text-xs text-muted-foreground">
-							We'll only search in the sources selected here.
-						</DropdownMenu.Label>
-					</DropdownMenu.Group>
+					{/if}
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
 		</div>

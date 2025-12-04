@@ -447,3 +447,48 @@ export async function getEventStats(
 		return stats;
 	});
 }
+
+/**
+ * Delete an event from Tinybird
+ *
+ * Uses the Data Sources API delete endpoint for permanent deletion in ClickHouse.
+ * Includes ownership verification to ensure user can only delete events they have access to.
+ *
+ * @param eventId - ID of the event to delete
+ * @param channelId - Channel ID for ownership verification
+ * @param orgId - Organization ID for ownership verification
+ * @returns Promise that resolves when deletion is complete
+ */
+export async function deleteEvent(
+	eventId: string,
+	channelId: string,
+	orgId: string
+): Promise<void> {
+	const operation = logger.start('Delete event from Tinybird', {
+		eventId,
+		channelId,
+		organizationId: orgId
+	});
+
+	try {
+		// Build DELETE condition with ownership checks
+		const deleteCondition = `id = '${eventId}' AND channel_id = '${channelId}' AND organization_id = '${orgId}'`;
+
+		await tinybird.deleteData('events', deleteCondition);
+
+		operation.end({ eventId, channelId, organizationId: orgId });
+
+		logger.success('Event deleted from Tinybird', {
+			eventId,
+			channelId,
+			organizationId: orgId
+		});
+	} catch (error) {
+		operation.error('Failed to delete event', error instanceof Error ? error : undefined, {
+			eventId,
+			channelId,
+			organizationId: orgId
+		});
+		throw error;
+	}
+}
