@@ -12,6 +12,14 @@ export default defineConfig({
 			process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || `dev-${Date.now()}`
 		)
 	},
+	// Fix for @xyflow/svelte importing Node.js modules (source-map-js, url)
+	ssr: {
+		noExternal: ['@xyflow/svelte']
+	},
+	optimizeDeps: {
+		include: ['@xyflow/svelte'],
+		exclude: ['source-map-js']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [

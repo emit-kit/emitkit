@@ -8,4 +8,5 @@ export * from './schema/webhook';
 export * from './schema/integration';
 export * from './schema/push-subscription';
 export * from './schema/funnel';
+export * from './schema/workflow';
 export * from './schema/types';

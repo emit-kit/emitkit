@@ -2,7 +2,7 @@ import type { EventInsert, Event } from '$lib/server/db/schema';
 import { createEvent } from './tinybird.service';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import { createLogger } from '$lib/server/logger';
+import { createContextLogger } from '$lib/server/logger';
 import {
 	invalidateChannelCache,
 	invalidateOrganizationCache,
@@ -10,22 +10,25 @@ import {
 } from '$lib/server/cache';
 import { waitUntil } from '$lib/server/wait-until';
 import { triggerWorkflow } from '$lib/server/workflow';
+import { matchAndExecuteWorkflows } from '$lib/features/workflows/server/trigger-matcher';
 
-const logger = createLogger('events');
+const logger = createContextLogger('events');
 
 export async function createAndBroadcastEvent(event: EventInsert): Promise<Event> {
-	// Fetch channel (folderId will be null for now since folder table doesn't exist)
+	// Fetch channel with folder information
 	const channel = await db.query.channel.findFirst({
 		where: eq(schema.channel.id, event.channelId),
-		columns: { id: true }
+		columns: { id: true, folderId: true }
 	});
 
 	if (!channel) {
 		throw new Error(`Channel ${event.channelId} not found`);
 	}
 
-	// 1. Create the event in Tinybird (pass undefined for folderId since folder table doesn't exist yet)
-	const createdEvent = await createEvent(event, undefined, false);
+	const folderId = channel.folderId;
+
+	// 1. Create the event in Tinybird
+	const createdEvent = await createEvent(event, folderId ?? undefined, false);
 
 	// 2. Fire-and-forget non-critical side effects
 	waitUntil(
@@ -50,7 +53,7 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 		eventId: createdEvent.id,
 		channelId: createdEvent.channelId,
 		organizationId: createdEvent.organizationId,
-		folderId: null, // null for now since folder table doesn't exist
+		folderId: folderId ?? null,
 		notify: event.notify ?? true,
 		eventType: event.title, // Use title as event type for now
 		tags: event.tags || []
@@ -61,6 +64,26 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 			channelId: event.channelId
 		});
 	});
+
+	// 4. Match and execute visual workflows (fire-and-forget)
+	if (folderId) {
+		waitUntil(
+			matchAndExecuteWorkflows({
+				eventId: createdEvent.id,
+				channelId: createdEvent.channelId,
+				folderId,
+				organizationId: createdEvent.organizationId,
+				title: createdEvent.title,
+				description: createdEvent.description ?? undefined,
+				tags: createdEvent.tags,
+				metadata: createdEvent.metadata as Record<string, unknown> | undefined
+			}).catch((error) => {
+				logger.error('Workflow matching failed', error instanceof Error ? error : undefined, {
+					eventId: createdEvent.id
+				});
+			})
+		);
+	}
 
 	return createdEvent;
 }

@@ -12,6 +12,7 @@ export * from './webhook';
 export * from './integration';
 export * from './push-subscription';
 export * from './funnel';
+export * from './workflow';
 export * from './types';
 
 // Utilities
