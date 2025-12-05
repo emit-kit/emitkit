@@ -7,10 +7,6 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<svelte:head>
-	<title>Notification Settings - EmitKit</title>
-</svelte:head>
-
 <div class="container mx-auto max-w-4xl p-6">
 	<!-- Header -->
 	<div class="mb-8">
@@ -28,6 +24,5 @@
 		</div>
 	</div>
 
-	<!-- Notification Settings Component -->
 	<NotificationSettings folders={data.folders} currentSubscription={data.currentSubscription} />
 </div>

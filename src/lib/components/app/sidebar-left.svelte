@@ -33,8 +33,16 @@
 				icon: Settings2Icon,
 				items: [
 					{
-						title: 'Notification Settings',
-						url: '/settings/notifications'
+						title: 'Settings',
+						url: '/organization/settings'
+					},
+					{
+						title: 'Integrations',
+						url: '/organization/integrations'
+					},
+					{
+						title: 'Notifications',
+						url: '/organization/notifications'
 					}
 				]
 			},

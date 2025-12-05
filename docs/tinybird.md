@@ -41,7 +41,6 @@ Add to `.env`:
 ```bash
 TINYBIRD_TOKEN="your-token-from-console"
 TINYBIRD_API_URL="https://api.tinybird.co"
-ENABLE_TINYBIRD_EVENTS="true"
 ```
 
 See [Configuration Guide](./configuration.md) for more details.

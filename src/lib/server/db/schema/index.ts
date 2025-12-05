@@ -9,6 +9,7 @@ export * from './folder';
 
 export * from './channel';
 export * from './webhook';
+export * from './integration';
 export * from './push-subscription';
 export * from './funnel';
 export * from './types';

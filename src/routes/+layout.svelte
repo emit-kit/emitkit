@@ -13,6 +13,10 @@
 	import PwaInstall from '$lib/components/pwa/pwa-install.svelte';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
+	import { authPathConfig } from '$lib/client/auth/auth-config.js';
+	import IntegrationModalProvider, {
+		useIntegrationModals
+	} from '$lib/features/integrations/components/modals/integration-modal-provider.svelte';
 
 	let { data, children } = $props();
 
@@ -79,8 +83,18 @@
 <!-- PWA Install prompt -->
 <PwaInstall manifestUrl="/manifest.webmanifest" useLocalStorage={true} />
 
-<AuthUIProvider {authClient} credentials={true} emailOTP={true} {toast}>
+<AuthUIProvider
+	{authClient}
+	credentials={true}
+	emailOTP={true}
+	{toast}
+	basePath={authPathConfig.basePath}
+	viewPaths={authPathConfig.viewPaths}
+	organization={true}
+>
 	<ModalStackProvider>
-		{@render children()}
+		<IntegrationModalProvider>
+			{@render children()}
+		</IntegrationModalProvider>
 	</ModalStackProvider>
 </AuthUIProvider>

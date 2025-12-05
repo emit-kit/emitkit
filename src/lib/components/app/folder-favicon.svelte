@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FolderIcon from '@lucide/svelte/icons/folder';
+	import { getFaviconUrl } from '$lib/utils/url';
 
 	interface Props {
 		url?: string | null;
@@ -9,10 +10,12 @@
 
 	let { url = null, fallbackIcon = null, size = 'md' }: Props = $props();
 
+	$inspect('Props', { url, fallbackIcon, size });
+
 	// Derive image URL
-	const imageUrl = $derived(
-		url ? `https://metadata.stacksee.com/api/icon?url=${encodeURIComponent(url)}&size=32` : null
-	);
+	const imageUrl = $derived(getFaviconUrl(url));
+
+	$inspect('Derived', { imageUrl });
 
 	// State management
 	let imageState = $state<'loading' | 'success' | 'error'>('loading');

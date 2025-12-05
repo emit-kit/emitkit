@@ -4,27 +4,84 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { createBreadcrumbActionsContext } from '$lib/context/breadcrumb-actions.svelte';
 	import { createPageActionsContext } from '$lib/context/page-actions.svelte';
+	import { cn } from '$lib/utils/ui.js';
+	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+	import * as Avatar from '$lib/components/ui/avatar/index.js';
+	import { Separator } from '$lib/components/ui/separator/index.js';
+	import { BreadcrumbsProvider } from '$lib/components/breadcrumbs-provider/index.js';
+	import { DEFAULT_CLASSES } from '$lib/client/constants.js';
+	import { page } from '$app/state';
 
 	let { children, data } = $props();
 
+	let pageDataCrumbs = $derived(page.data.crumbs);
+
 	const breadcrumbActions = createBreadcrumbActionsContext();
 	const pageActions = createPageActionsContext();
+
+	// Clear page actions when route changes to prevent stale actions from previous routes
+	$effect(() => {
+		// Watch the route ID to detect navigation
+		page.route.id;
+		// This effect will run after route changes, giving child components a chance to register new actions
+	});
 </script>
 
 <Sidebar.Provider>
 	<SidebarLeft />
 
 	<Sidebar.Inset>
-		<header class="sticky top-0 flex h-14 shrink-0 items-center gap-2 border-b bg-background">
-			<div class="flex flex-1 items-center gap-2 px-3">
-				<Sidebar.Trigger />
+		<header
+			class="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
+		>
+			<div class={cn('flex flex-1 items-center gap-2', DEFAULT_CLASSES.APP_CONTENT_PADDING_X)}>
+				<Sidebar.Trigger class="-ml-1" />
+				<Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" />
 
-				{#if breadcrumbActions.action}
-					<div class="ml-auto">
-						<breadcrumbActions.action.component {...breadcrumbActions.action.props} />
-					</div>
-				{/if}
+				<BreadcrumbsProvider
+					url={page.url}
+					routeId={page.route.id}
+					pageData={page.data}
+					crumbs={pageDataCrumbs}
+				>
+					{#snippet children({ crumbs })}
+						<Breadcrumb.Root>
+							<Breadcrumb.List>
+								<!-- Home -->
+								<Breadcrumb.Item class="hidden: md:block">
+									<Breadcrumb.Link href="/">Overview</Breadcrumb.Link>
+								</Breadcrumb.Item>
+
+								<!-- Crumbs -->
+								{#each crumbs as c}
+									<Breadcrumb.Separator class="hidden md:block" />
+
+									<Breadcrumb.Item class="hidden md:block">
+										<Breadcrumb.Link
+											href={c.url}
+											class={cn(c.url === page.url && 'text-foreground', 'flex items-center gap-2')}
+										>
+											{#if c.metadata?.iconUrl}
+												<Avatar.Root class="h-4 w-4">
+													<Avatar.Image src={c.metadata.iconUrl} alt={c.title} />
+													<Avatar.Fallback class="text-[8px]">{c.title?.charAt(0)}</Avatar.Fallback>
+												</Avatar.Root>
+											{/if}
+											{c.title}
+										</Breadcrumb.Link>
+									</Breadcrumb.Item>
+								{/each}
+							</Breadcrumb.List>
+						</Breadcrumb.Root>
+					{/snippet}
+				</BreadcrumbsProvider>
 			</div>
+
+			{#if breadcrumbActions.action}
+				<div class={cn(DEFAULT_CLASSES.APP_CONTENT_PADDING_X)}>
+					<breadcrumbActions.action.component {...breadcrumbActions.action.props} />
+				</div>
+			{/if}
 		</header>
 
 		<!-- Page Actions Bar -->

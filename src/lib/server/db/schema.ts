@@ -5,6 +5,7 @@ export * from './schema/folder';
 export * from './schema/utils';
 export * from './schema/channel';
 export * from './schema/webhook';
+export * from './schema/integration';
 export * from './schema/push-subscription';
 export * from './schema/funnel';
 export * from './schema/types';

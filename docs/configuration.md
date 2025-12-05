@@ -69,7 +69,6 @@ OPENAI_API_KEY="your-openai-api-key-here"
 ```bash
 TINYBIRD_TOKEN="your-tinybird-token-here"
 TINYBIRD_API_URL="https://api.tinybird.co"
-ENABLE_TINYBIRD_EVENTS="true"
 ```
 
 - **Description**: Event storage and analytics backend
@@ -285,7 +284,6 @@ OPENAI_API_KEY="your-openai-api-key-here"
 # -----------------------------------------------------------------------------
 TINYBIRD_TOKEN="your-tinybird-token-here"
 TINYBIRD_API_URL="https://api.tinybird.co"
-ENABLE_TINYBIRD_EVENTS="true"
 
 # -----------------------------------------------------------------------------
 # Optional: Analytics & Monitoring

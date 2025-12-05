@@ -80,13 +80,15 @@ export const updateFolderCommand = command(updateFolderSchema, async (input) => 
 const updateFolderFormSchema = z.object({
 	folderId: z.string(),
 	organizationId: z.string(),
-	name: z.string().min(1, 'Folder name is required').max(255, 'Folder name is too long')
+	name: z.string().min(1, 'Folder name is required').max(255, 'Folder name is too long'),
+	url: z.union([z.string().url('Invalid URL format').max(500, 'URL is too long'), z.literal('')]).optional()
 });
 
 export const updateFolderForm = form(updateFolderFormSchema, async (input) => {
 	try {
 		return await folderService.updateFolder(input.folderId, input.organizationId, {
-			name: input.name
+			name: input.name,
+			url: input.url === '' ? undefined : input.url
 		});
 	} catch (error) {
 		logger.error('Form submission failed', error as Error, {

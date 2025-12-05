@@ -5,12 +5,7 @@ import type { PathConfig } from 'better-auth-ui-svelte';
  * Used by both the AuthUIProvider and server-side redirects
  */
 export const authPathConfig: PathConfig = {
-	basePath: '/auth',
-	// Add custom viewPaths here if needed
-	viewPaths: {
-		// SIGN_IN: 'login',
-		// SIGN_UP: 'register'
-	}
+	basePath: '/auth'
 };
 
 /**

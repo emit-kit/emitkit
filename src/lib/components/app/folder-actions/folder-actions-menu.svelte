@@ -5,15 +5,15 @@
 
 	interface Props {
 		folder: Folder;
-		onRename: (folderId: string, currentName: string) => void;
+		onEdit: (folderId: string, currentName: string, currentUrl: string | null) => void;
 		onDelete: (folderId: string, folderName: string) => void;
 	}
 
-	let { folder, onRename, onDelete }: Props = $props();
+	let { folder, onEdit, onDelete }: Props = $props();
 
-	function handleRename(event: MouseEvent) {
+	function handleEdit(event: MouseEvent) {
 		event.stopPropagation();
-		onRename(folder.id, folder.name);
+		onEdit(folder.id, folder.name, folder.url ?? null);
 	}
 
 	function handleDelete(event: MouseEvent) {
@@ -37,7 +37,7 @@
 		{/snippet}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
-		<DropdownMenu.Item onclick={handleRename}>Rename folder</DropdownMenu.Item>
+		<DropdownMenu.Item onclick={handleEdit}>Edit folder</DropdownMenu.Item>
 		<DropdownMenu.Separator />
 		<DropdownMenu.Item onclick={handleDelete} class="text-destructive focus:text-destructive">
 			Archive folder

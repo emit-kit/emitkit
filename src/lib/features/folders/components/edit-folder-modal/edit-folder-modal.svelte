@@ -6,12 +6,14 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
+	import XIcon from '@lucide/svelte/icons/x';
 
 	// Props interface
 	interface Props {
 		folderId: string;
 		organizationId: string;
 		currentName: string;
+		currentUrl?: string | null;
 	}
 
 	// Component props with StackItemProps for modal integration
@@ -19,11 +21,12 @@
 		item,
 		folderId,
 		organizationId,
-		currentName
-	}: StackItemProps<{ success: boolean; folderName?: string }> & Props = $props();
+		currentName,
+		currentUrl = null
+	}: StackItemProps<{ success: boolean; folderName?: string; folderUrl?: string | null }> & Props = $props();
 
 	// Create a unique form instance for this modal using a unique key
-	const formKey = `rename-folder-modal-${Math.random().toString(36).substring(2, 9)}`;
+	const formKey = `edit-folder-modal-${Math.random().toString(36).substring(2, 9)}`;
 	const form = updateFolderForm.for(formKey);
 
 	// Helper to safely get field issues
@@ -44,6 +47,14 @@
 		item.resolve({ success: false });
 	}
 
+	// Handle clear URL
+	function handleClearUrl() {
+		const urlInput = document.getElementById('folder-url') as HTMLInputElement;
+		if (urlInput) {
+			urlInput.value = '';
+		}
+	}
+
 	// Watch for successful submission
 	let previousPending = $state(form.pending);
 	$effect(() => {
@@ -52,15 +63,18 @@
 			// Check if there are no field errors (successful submission)
 			const hasErrors =
 				form.fields.name.issues()?.length ||
+				form.fields.url?.issues?.()?.length ||
 				form.fields.folderId.issues()?.length ||
 				form.fields.organizationId.issues()?.length;
 
 			if (!hasErrors) {
 				// Submission was successful
 				const newName = form.fields.name.value();
+				const newUrl = form.fields.url?.value?.();
 				item.resolve({
 					success: true,
-					folderName: newName
+					folderName: newName,
+					folderUrl: newUrl
 				});
 			}
 		}
@@ -71,9 +85,9 @@
 <Dialog.Root open={true}>
 	<Dialog.Content class="sm:max-w-[425px]">
 		<Dialog.Header>
-			<Dialog.Title>Rename Folder</Dialog.Title>
+			<Dialog.Title>Edit Folder</Dialog.Title>
 			<Dialog.Description>
-				Update the name of your folder. This will not affect the folder slug or URL.
+				Update your folder's name and optionally associate a website URL to display its favicon.
 			</Dialog.Description>
 		</Dialog.Header>
 
@@ -103,6 +117,36 @@
 					/>
 					<Field.Description>Choose a descriptive name for your folder</Field.Description>
 					{#each getIssues(form.fields.name) as issue, i (i)}
+						<Field.Error>{issue.message}</Field.Error>
+					{/each}
+				</Field.Field>
+
+				<!-- Website URL -->
+				<Field.Field data-invalid={getIssues(form.fields.url).length > 0}>
+					<Field.Label for="folder-url">Website URL</Field.Label>
+					<div class="relative">
+						<Input
+							id="folder-url"
+							placeholder="https://example.com"
+							{...form.fields.url.as('text')}
+							value={currentUrl || ''}
+							aria-invalid={getIssues(form.fields.url).length > 0}
+						/>
+						{#if currentUrl}
+							<button
+								type="button"
+								onclick={handleClearUrl}
+								class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
+								aria-label="Clear URL"
+							>
+								<XIcon class="size-4" />
+							</button>
+						{/if}
+					</div>
+					<Field.Description>
+						Optional: Add a website URL to display its favicon in the folder list
+					</Field.Description>
+					{#each getIssues(form.fields.url) as issue, i (i)}
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Field>

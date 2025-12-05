@@ -136,17 +136,18 @@
 		}
 	}
 
-	async function handleRenameFolder(folderId: string, currentName: string) {
+	async function handleEditFolder(folderId: string, currentName: string, currentUrl: string | null) {
 		if (!organization.data) {
 			console.error('No organization selected');
 			return;
 		}
 
-		const modal = modals.push('renameFolder', {
+		const modal = modals.push('editFolder', {
 			props: {
 				folderId: folderId,
 				organizationId: organization.data.id,
-				currentName: currentName
+				currentName: currentName,
+				currentUrl: currentUrl
 			}
 		});
 
@@ -233,7 +234,7 @@
 							<!-- Folder Actions Menu -->
 							<FolderActionsMenu
 								{folder}
-								onRename={handleRenameFolder}
+								onEdit={handleEditFolder}
 								onDelete={handleDeleteFolder}
 							/>
 						</div>

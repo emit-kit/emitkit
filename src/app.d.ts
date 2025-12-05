@@ -6,6 +6,7 @@ import type {
 	OrganizationObj,
 	auth
 } from '$lib/server/auth';
+import type { Breadcrumb } from '$lib/components/breadcrumbs-provider/breadcrumbs-provider.svelte';
 
 declare global {
 	namespace App {
@@ -20,6 +21,7 @@ declare global {
 			requestId?: string;
 		}
 		interface PageData {
+			crumbs?: Breadcrumb[];
 			orgId: string;
 		}
 		interface Platform {

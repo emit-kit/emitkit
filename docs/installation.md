@@ -96,7 +96,6 @@ BETTER_AUTH_URL="http://localhost:5173"
 ```bash
 TINYBIRD_TOKEN="your-tinybird-token"
 TINYBIRD_API_URL="https://api.tinybird.co"
-ENABLE_TINYBIRD_EVENTS="true"
 ```
 
 ### 3.5. Generate VAPID Keys (for Push Notifications)
