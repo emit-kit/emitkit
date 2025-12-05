@@ -17,14 +17,14 @@
 	// Props interface
 	interface Props {
 		organizationId: string;
-		siteId: string;
+		folderId: string;
 	}
 
 	// Component props with StackItemProps for modal integration
 	let {
 		item,
 		organizationId,
-		siteId
+		folderId
 	}: StackItemProps<{ success: boolean; channelId?: string }> & Props = $props();
 
 	// Create a unique form instance for this modal using a unique key
@@ -110,9 +110,9 @@
 		</Dialog.Header>
 
 		<form {...form} class="space-y-6">
-			<!-- Hidden organizationId and siteId fields -->
+			<!-- Hidden organizationId and folderId fields -->
 			<input {...form.fields.organizationId.as('text')} type="hidden" value={organizationId} />
-			<input {...form.fields.siteId.as('text')} type="hidden" value={siteId} />
+			<input {...form.fields.folderId.as('text')} type="hidden" value={folderId} />
 
 			<Field.Group>
 				<!-- Channel Name with Emoji Picker -->

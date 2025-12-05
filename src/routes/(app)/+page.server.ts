@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { listSitesByOrg } from '$lib/features/sites/server/repository';
+import { listFoldersByOrg } from '$lib/features/folders/server/repository';
 import { listEventsByOrg } from '$lib/features/events/server';
 import { listChannels } from '$lib/features/channels/server/repository';
 
@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals, request }) => {
 
 	if (!session?.session?.activeOrganizationId) {
 		return {
-			sites: [],
+			folders: [],
 			channels: [],
 			events: {
 				items: [],
@@ -28,11 +28,11 @@ export const load: PageServerLoad = async ({ locals, request }) => {
 
 	const orgId = session.session.activeOrganizationId;
 
-	// Get sites, channels, and events for the organization in parallel
-	const [sitesResult, channelsResult, eventsResult] = await Promise.all([
-		listSitesByOrg(orgId, {
+	// Get folders, channels, and events for the organization in parallel
+	const [foldersResult, channelsResult, eventsResult] = await Promise.all([
+		listFoldersByOrg(orgId, {
 			page: 1,
-			limit: 100 // Get all sites
+			limit: 100 // Get all folders
 		}),
 		listChannels(orgId, {
 			page: 1,
@@ -45,7 +45,7 @@ export const load: PageServerLoad = async ({ locals, request }) => {
 	]);
 
 	return {
-		sites: sitesResult.items,
+		folders: foldersResult.items,
 		channels: channelsResult.items,
 		events: eventsResult,
 		orgId

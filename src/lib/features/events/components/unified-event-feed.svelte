@@ -5,7 +5,7 @@
 	import type { PaginatedResult } from '$lib/features/events/types.js';
 	import EventListItem from '$lib/features/events/components/event-list-item.svelte';
 	import { Wrapper } from '$lib/components/ui/wrapper';
-	import type { Site } from '$lib/features/sites/types';
+	import type { Folder } from '$lib/features/folders/types';
 	import type { Channel } from '$lib/features/channels/types';
 
 	let {
@@ -15,7 +15,7 @@
 		organizationId
 	}: {
 		initialEvents: PaginatedResult<Event>;
-		sites: Site[];
+		sites: Folder[];
 		channels: Channel[];
 		organizationId: string;
 	} = $props();
@@ -55,8 +55,8 @@
 		}
 	});
 
-	// Create maps for channel and site lookups (reactive to prop changes)
-	const siteMap = $derived(new Map(sites.map((site) => [site.id, site])));
+	// Create maps for channel and folder lookups (reactive to prop changes)
+	const folderMap = $derived(new Map(sites.map((folder) => [folder.id, folder])));
 	const channelMap = $derived(new Map(channels.map((channel) => [channel.id, channel])));
 
 	// Handle event deletion
@@ -253,7 +253,7 @@
 					<!-- Events in this group -->
 					<div class="flex flex-col gap-3">
 						{#each group.events as event (event.id)}
-							{@const site = siteMap.get(event.siteId)}
+							{@const folder = folderMap.get(event.folderId)}
 							{@const channel = channelMap.get(event.channelId)}
 							<EventListItem
 								{event}
@@ -261,8 +261,8 @@
 								channelId={event.channelId}
 								{organizationId}
 								onDeleted={() => handleEventDeleted(event.id)}
-								siteName={site?.name}
-								siteSlug={site?.slug}
+								folderName={folder?.name}
+								folderSlug={folder?.slug}
 								channelName={channel?.name}
 								showChannelContext={true}
 							/>

@@ -23,16 +23,16 @@ function formatDateForTinybird(date: Date): string {
 }
 
 // Convert EventInsert (Drizzle schema) to TinybirdEvent
-// Note: Requires siteId to be passed in or fetched from channel
+// Note: Requires folderId to be passed in or fetched from channel
 // Note: Fetches organization's retention_tier for event-time retention snapshot
-async function eventInsertToTinybird(event: EventInsert, siteId?: string): Promise<TinybirdEvent> {
-	// If siteId not provided, fetch from channel
-	let resolvedSiteId = siteId;
-	if (!resolvedSiteId) {
+async function eventInsertToTinybird(event: EventInsert, folderId?: string): Promise<TinybirdEvent> {
+	// If folderId not provided, fetch from channel
+	let resolvedFolderId = folderId;
+	if (!resolvedFolderId) {
 		const channel = await db.query.channel.findFirst({
 			where: eq(schema.channel.id, event.channelId)
 		});
-		resolvedSiteId = channel?.siteId || '';
+		resolvedFolderId = channel?.folderId || '';
 	}
 
 	// Fetch organization's retention tier for event-time snapshot
@@ -48,7 +48,7 @@ async function eventInsertToTinybird(event: EventInsert, siteId?: string): Promi
 	return {
 		id: event.id || createBetterAuthId('event'),
 		channel_id: event.channelId,
-		site_id: resolvedSiteId,
+		folder_id: resolvedFolderId,
 		organization_id: event.organizationId,
 		retention_tier: org.retentionTier, // Snapshot tier at event creation
 		title: event.title,
@@ -65,7 +65,7 @@ async function eventInsertToTinybird(event: EventInsert, siteId?: string): Promi
 }
 
 // Convert Tinybird response to Event (Drizzle schema)
-// Note: site_id is not in Drizzle Event schema (denormalized in Tinybird only)
+// Note: folder_id is not in Drizzle Event schema (denormalized in Tinybird only)
 // Note: Tinybird returns JSON columns (tags, metadata) as strings, so we parse them
 function tinybirdToEvent(tb: Record<string, unknown>): Event {
 	// Parse tags - Tinybird returns JSON as string
@@ -99,7 +99,7 @@ function tinybirdToEvent(tb: Record<string, unknown>): Event {
 	return {
 		id: String(tb.id),
 		channelId: String(tb.channel_id),
-		siteId: String(tb.site_id),
+		folderId: String(tb.folder_id),
 		organizationId: String(tb.organization_id),
 		title: String(tb.title),
 		description: tb.description ? String(tb.description) : null,
@@ -116,10 +116,10 @@ function tinybirdToEvent(tb: Record<string, unknown>): Event {
 
 export async function createEvent(
 	event: EventInsert,
-	siteId?: string,
+	folderId?: string,
 	wait: boolean = false
 ): Promise<Event> {
-	const tinybirdEvent = await eventInsertToTinybird(event, siteId);
+	const tinybirdEvent = await eventInsertToTinybird(event, folderId);
 
 	// Ingest to Tinybird
 	const result = await tinybird.ingestEvent(tinybirdEvent, wait);
@@ -140,7 +140,7 @@ export async function createEvent(
 	logger.info('Event ingested to Tinybird', {
 		id: tinybirdEvent.id,
 		channelId: tinybirdEvent.channel_id,
-		siteId: tinybirdEvent.site_id,
+		folderId: tinybirdEvent.folder_id,
 		organizationId: tinybirdEvent.organization_id,
 		title: tinybirdEvent.title,
 		source: tinybirdEvent.source,
@@ -151,7 +151,7 @@ export async function createEvent(
 	return {
 		id: tinybirdEvent.id,
 		channelId: tinybirdEvent.channel_id,
-		siteId: tinybirdEvent.site_id,
+		folderId: tinybirdEvent.folder_id,
 		organizationId: tinybirdEvent.organization_id,
 		title: tinybirdEvent.title,
 		description: tinybirdEvent.description || null,
@@ -170,14 +170,14 @@ export async function createEventBatch(
 	events: EventInsert[],
 	wait: boolean = false
 ): Promise<{ successful_rows: number; quarantined_rows: number }> {
-	// Optimize: Batch-fetch all unique channel siteIds and org tiers at once to avoid N+1 queries
+	// Optimize: Batch-fetch all unique channel folderIds and org tiers at once to avoid N+1 queries
 	const uniqueChannelIds = [...new Set(events.map((e) => e.channelId))];
 	const uniqueOrgIds = [...new Set(events.map((e) => e.organizationId))];
 
 	// Fetch all channels in a single query
 	const channels = await db.query.channel.findMany({
 		where: inArray(schema.channel.id, uniqueChannelIds),
-		columns: { id: true, siteId: true }
+		columns: { id: true, folderId: true }
 	});
 
 	// Fetch all organizations in a single query
@@ -187,12 +187,12 @@ export async function createEventBatch(
 	});
 
 	// Create maps for O(1) lookups
-	const channelSiteMap = new Map(channels.map((c) => [c.id, c.siteId]));
+	const channelFolderMap = new Map(channels.map((c) => [c.id, c.folderId]));
 	const orgTierMap = new Map(orgs.map((o) => [o.id, o.retentionTier]));
 
-	// Convert all events with pre-fetched siteIds and retention tiers
+	// Convert all events with pre-fetched folderIds and retention tiers
 	const tinybirdEvents = events.map((e) => {
-		const siteId = channelSiteMap.get(e.channelId) || '';
+		const folderId = channelFolderMap.get(e.channelId) || '';
 		const retentionTier = orgTierMap.get(e.organizationId);
 
 		if (!retentionTier) {
@@ -202,7 +202,7 @@ export async function createEventBatch(
 		return {
 			id: e.id || createBetterAuthId('event'),
 			channel_id: e.channelId,
-			site_id: siteId,
+			folder_id: folderId,
 			organization_id: e.organizationId,
 			retention_tier: retentionTier,
 			title: e.title,

@@ -26,7 +26,7 @@ export async function createChannel(channel: ChannelInsert): Promise<Channel> {
 		const error = new Error('Failed to create channel');
 		logger.error('Channel creation failed', error, {
 			organizationId: channel.organizationId,
-			siteId: channel.siteId,
+			folderId: channel.folderId,
 			name: channel.name
 		});
 		throw error;
@@ -35,7 +35,7 @@ export async function createChannel(channel: ChannelInsert): Promise<Channel> {
 	logger.info('Channel created', {
 		id: created.id,
 		organizationId: created.organizationId,
-		siteId: created.siteId,
+		folderId: created.folderId,
 		name: created.name
 	});
 
@@ -58,12 +58,12 @@ export async function getChannelByIdAndOrg(id: string, orgId: string): Promise<C
 	return channel ?? null;
 }
 
-export async function getChannelByNameAndSite(
+export async function getChannelByNameAndFolder(
 	name: string,
-	siteId: string
+	folderId: string
 ): Promise<Channel | null> {
 	const channel = await db.query.channel.findFirst({
-		where: and(eq(schema.channel.name, name), eq(schema.channel.siteId, siteId))
+		where: and(eq(schema.channel.name, name), eq(schema.channel.folderId, folderId))
 	});
 
 	return channel ?? null;
@@ -71,7 +71,7 @@ export async function getChannelByNameAndSite(
 
 export async function getOrCreateChannel(
 	name: string,
-	siteId: string,
+	folderId: string,
 	organizationId: string,
 	options?: {
 		icon?: string;
@@ -82,13 +82,13 @@ export async function getOrCreateChannel(
 	const slug = slugify(name);
 
 	// Try to find existing channel by slugified name
-	const existing = await getChannelByNameAndSite(slug, siteId);
+	const existing = await getChannelByNameAndFolder(slug, folderId);
 	if (existing) {
 		logger.info('Channel found, reusing existing', {
 			id: existing.id,
 			name: slug,
 			originalName: name,
-			siteId,
+			folderId,
 			organizationId
 		});
 		return existing;
@@ -98,11 +98,11 @@ export async function getOrCreateChannel(
 	logger.info('Channel not found, creating new', {
 		name: slug,
 		originalName: name,
-		siteId,
+		folderId,
 		organizationId
 	});
 	return await createChannel({
-		siteId,
+		folderId,
 		organizationId,
 		name: slug,
 		icon: options?.icon,
@@ -138,8 +138,8 @@ export async function listChannels(
 	return result;
 }
 
-export async function listChannelsBySite(
-	siteId: string,
+export async function listChannelsByFolder(
+	folderId: string,
 	pagination?: PaginationParams
 ): Promise<PaginatedQueryResult<Channel>> {
 	const page = pagination?.page || 1;
@@ -148,7 +148,7 @@ export async function listChannelsBySite(
 
 	// Build the main query - exclude soft-deleted channels
 	const query = db.query.channel.findMany({
-		where: and(eq(schema.channel.siteId, siteId), isNull(schema.channel.deletedAt)),
+		where: and(eq(schema.channel.folderId, folderId), isNull(schema.channel.deletedAt)),
 		orderBy: (channels, { desc }) => [desc(channels.createdAt)],
 		limit,
 		offset
@@ -158,7 +158,7 @@ export async function listChannelsBySite(
 	const countQuery = db
 		.select({ count: sql<number>`count(*)` })
 		.from(schema.channel)
-		.where(and(eq(schema.channel.siteId, siteId), isNull(schema.channel.deletedAt)));
+		.where(and(eq(schema.channel.folderId, folderId), isNull(schema.channel.deletedAt)));
 
 	// Execute both queries and build paginated result
 	const result = await buildPaginatedQuery(query, countQuery, { page, limit });

@@ -7,7 +7,7 @@
 	import { authClient } from '$lib/client/auth/auth-client';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
-	import NavSites from './nav-sites.svelte';
+	import NavFolders from './nav-folders.svelte';
 	import NavMain from './nav-main.svelte';
 	import NavSecondary from './nav-secondary.svelte';
 
@@ -62,7 +62,7 @@
 		<NavMain items={data.navMain} />
 	</Sidebar.Header>
 	<Sidebar.Content>
-		<NavSites />
+		<NavFolders />
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 	<Sidebar.Footer>

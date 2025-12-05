@@ -2,12 +2,12 @@ DESCRIPTION >
     Main events table for storing all application events.
     Optimized for time-series queries with tier-based retention filtering.
     Retention tier is snapshotted at event creation time (event-time retention).
-    Hierarchy: organization -> site -> channel -> event
+    Hierarchy: organization -> folder -> channel -> event
 
 SCHEMA >
     `id` String `json:$.id`,
     `channel_id` String `json:$.channel_id`,
-    `site_id` String `json:$.site_id`,
+    `folder_id` String `json:$.folder_id`,
     `organization_id` String `json:$.organization_id`,
     `retention_tier` String `json:$.retention_tier`,
     `title` String `json:$.title`,
@@ -25,7 +25,7 @@ FORWARD_QUERY >
     SELECT
         id,
         channel_id,
-        site_id,
+        site_id AS folder_id,
         organization_id,
         'pro' AS retention_tier,
         title,
@@ -41,5 +41,5 @@ FORWARD_QUERY >
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(created_at)"
-ENGINE_SORTING_KEY "organization_id, retention_tier, site_id, channel_id, created_at"
+ENGINE_SORTING_KEY "organization_id, retention_tier, folder_id, channel_id, created_at"
 ENGINE_TTL "toDateTime(created_at) + INTERVAL 400 DAY"

@@ -1,5 +1,5 @@
 import type { PushSubscription } from '$lib/server/db/schema';
-import type { Site } from '$lib/features/sites/types';
+import type { Folder } from '$lib/features/folders/types';
 import type { Channel } from '$lib/features/channels/types';
 
 export type { PushSubscription };
@@ -19,12 +19,12 @@ export type SubscriptionState = {
 	browserSupport: BrowserSupport;
 };
 
-export type SiteWithChannels = Site & {
+export type FolderWithChannels = Folder & {
 	channels: Channel[];
 };
 
 export type NotificationSettings = {
-	enabledSites: Set<string>;
+	enabledFolders: Set<string>;
 	enabledChannels: Set<string>;
 	subscribeToAll: boolean;
 };

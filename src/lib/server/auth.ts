@@ -16,7 +16,7 @@ import {
 	owner,
 	viewer
 } from '$lib/client/auth/permissions.js';
-import { createBetterAuthId, site } from './db/schema';
+import { createBetterAuthId, folder } from './db/schema';
 import { analytics } from '$lib/features/analytics/server';
 import { createId } from '@paralleldrive/cuid2';
 import { createLogger } from '$lib/server/logger';
@@ -319,36 +319,36 @@ async function createDefaultOrganization(
 
 async function createDefaultSite(org: { id: string; name: string }) {
 	try {
-		// Create the default site (without API key - will be created in onboarding)
-		const [newSite] = await db
-			.insert(site)
+		// Create the default folder (without API key - will be created in onboarding)
+		const [newFolder] = await db
+			.insert(folder)
 			.values({
-				id: createBetterAuthId('site'),
+				id: createBetterAuthId('folder'),
 				organizationId: org.id,
-				name: 'Default Site',
+				name: 'Default Folder',
 				slug: 'default',
-				description: 'Your first site - you can create more sites for different apps',
+				description: 'Your first folder - you can create more folders for different apps',
 				createdAt: new Date(),
 				updatedAt: new Date()
 			})
 			.returning();
 
-		if (!newSite) {
-			logger.error('Failed to create default site for organization', undefined, {
+		if (!newFolder) {
+			logger.error('Failed to create default folder for organization', undefined, {
 				organizationId: org.id,
 				organizationName: org.name
 			});
 			return;
 		}
 
-		logger.success('Created default site for organization', {
+		logger.success('Created default folder for organization', {
 			organizationId: org.id,
 			organizationName: org.name,
-			siteId: newSite.id,
+			folderId: newFolder.id,
 			message: 'API key will be created during user onboarding'
 		});
 	} catch (error) {
-		logger.error('Error creating default site', error instanceof Error ? error : undefined, {
+		logger.error('Error creating default folder', error instanceof Error ? error : undefined, {
 			organizationId: org.id,
 			organizationName: org.name
 		});

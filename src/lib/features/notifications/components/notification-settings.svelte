@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SiteWithChannels } from '$lib/features/notifications/types';
+	import type { FolderWithChannels } from '$lib/features/notifications/types';
 	import type { PushSubscription } from '$lib/server/db/schema';
 	import { createNotificationManager } from '$lib/features/notifications/client';
 	import * as Card from '$lib/components/ui/card';
@@ -15,11 +15,11 @@
 	import InfoIcon from '@lucide/svelte/icons/info';
 
 	interface Props {
-		sites: SiteWithChannels[];
+		folders: FolderWithChannels[];
 		currentSubscription: PushSubscription | null;
 	}
 
-	let { sites, currentSubscription }: Props = $props();
+	let { folders, currentSubscription }: Props = $props();
 
 	const manager = createNotificationManager();
 
@@ -28,21 +28,21 @@
 	let subscribeToAll = $state((currentSubscription?.channelIds?.length || 0) === 0);
 
 	// Derive all channel IDs
-	const allChannelIds = $derived(sites.flatMap((site) => site.channels.map((c) => c.id)));
+	const allChannelIds = $derived(folders.flatMap((folder) => folder.channels.map((c) => c.id)));
 
-	// Check if a site has all channels enabled
-	function isSiteEnabled(site: SiteWithChannels): boolean {
+	// Check if a folder has all channels enabled
+	function isSiteEnabled(folder: FolderWithChannels): boolean {
 		if (subscribeToAll) return true;
-		return site.channels.every((channel) => subscribedChannels.has(channel.id));
+		return folder.channels.every((channel) => subscribedChannels.has(channel.id));
 	}
 
-	// Check if a site has some channels enabled
-	function isSitePartiallyEnabled(site: SiteWithChannels): boolean {
+	// Check if a folder has some channels enabled
+	function isSitePartiallyEnabled(folder: FolderWithChannels): boolean {
 		if (subscribeToAll) return false;
-		const enabledCount = site.channels.filter((channel) =>
+		const enabledCount = folder.channels.filter((channel) =>
 			subscribedChannels.has(channel.id)
 		).length;
-		return enabledCount > 0 && enabledCount < site.channels.length;
+		return enabledCount > 0 && enabledCount < folder.channels.length;
 	}
 
 	// Toggle master switch
@@ -64,18 +64,18 @@
 		}
 	}
 
-	// Toggle site (all channels in site)
-	async function toggleSite(site: SiteWithChannels, enabled: boolean) {
+	// Toggle folder (all channels in folder)
+	async function toggleSite(folder: FolderWithChannels, enabled: boolean) {
 		if (enabled) {
-			// Enable all channels in this site
+			// Enable all channels in this folder
 			const newChannels = new Set(subscribedChannels);
-			site.channels.forEach((channel) => newChannels.add(channel.id));
+			folder.channels.forEach((channel) => newChannels.add(channel.id));
 			subscribedChannels = newChannels;
 			subscribeToAll = false;
 		} else {
-			// Disable all channels in this site
+			// Disable all channels in this folder
 			const newChannels = new Set(subscribedChannels);
-			site.channels.forEach((channel) => newChannels.delete(channel.id));
+			folder.channels.forEach((channel) => newChannels.delete(channel.id));
 			subscribedChannels = newChannels;
 			subscribeToAll = false;
 		}
@@ -127,7 +127,7 @@
 			<div class="ml-2">
 				<p class="font-semibold">Notifications blocked</p>
 				<p class="text-sm">
-					You've blocked notifications for this site. Please enable them in your browser settings to
+					You've blocked notifications for this folder. Please enable them in your browser settings to
 					receive notifications.
 				</p>
 			</div>
@@ -225,35 +225,35 @@
 					<div class="space-y-4">
 						<div class="flex items-center gap-2 text-sm text-muted-foreground">
 							<InfoIcon class="size-4" />
-							<span>Configure notifications per site and channel</span>
+							<span>Configure notifications per folder and channel</span>
 						</div>
 
-						{#each sites as site (site.id)}
+						{#each folders as folder (folder.id)}
 							<Card.Root class="border-muted">
 								<Card.Header class="pb-3">
 									<div class="flex items-center justify-between">
 										<div class="flex items-center gap-2">
-											{#if site.icon}
-												<span class="text-xl">{site.icon}</span>
+											{#if folder.icon}
+												<span class="text-xl">{folder.icon}</span>
 											{/if}
 											<div>
-												<Card.Title class="text-base">{site.name}</Card.Title>
+												<Card.Title class="text-base">{folder.name}</Card.Title>
 												<p class="text-xs text-muted-foreground">
-													{site.channels.length} channel{site.channels.length !== 1 ? 's' : ''}
+													{folder.channels.length} channel{folder.channels.length !== 1 ? 's' : ''}
 												</p>
 											</div>
 										</div>
 										<Switch
-											checked={isSiteEnabled(site)}
-											onCheckedChange={(enabled) => toggleSite(site, enabled)}
+											checked={isSiteEnabled(folder)}
+											onCheckedChange={(enabled) => toggleSite(folder, enabled)}
 											disabled={manager.isLoading}
 										/>
 									</div>
 								</Card.Header>
 
-								{#if site.channels.length > 0}
+								{#if folder.channels.length > 0}
 									<Card.Content class="space-y-2 pt-0">
-										{#each site.channels as channel (channel.id)}
+										{#each folder.channels as channel (channel.id)}
 											<div
 												class="flex items-center justify-between rounded-md border border-transparent p-2 hover:border-muted"
 											>

@@ -55,7 +55,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 									data: {
 										id: event.id,
 										channelId: event.channelId,
-										siteId: event.siteId,
+										folderId: event.folderId,
 										organizationId: event.organizationId,
 										title: event.title,
 										description: event.description,

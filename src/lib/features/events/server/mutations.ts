@@ -14,10 +14,15 @@ import { waitUntil } from '$lib/server/wait-until';
 const logger = createLogger('events');
 
 export async function createAndBroadcastEvent(event: EventInsert): Promise<Event> {
-	// Fetch siteId from channel (needed for Tinybird)
+	// Fetch channel with folder information (needed for Tinybird and notifications)
 	const channel = await db.query.channel.findFirst({
 		where: eq(schema.channel.id, event.channelId),
-		columns: { siteId: true }
+		columns: { folderId: true },
+		with: {
+			folder: {
+				columns: { name: true }
+			}
+		}
 	});
 
 	if (!channel) {
@@ -25,7 +30,7 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 	}
 
 	// 1. Create the event in Tinybird
-	const createdEvent = await createEvent(event, channel.siteId, false);
+	const createdEvent = await createEvent(event, channel.folderId, false);
 
 	// 2. Invalidate caches (non-blocking with waitUntil)
 	waitUntil(
@@ -56,16 +61,23 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 
 	// 4. Send push notifications if notify = true (non-blocking with waitUntil)
 	if (event.notify) {
+		// Build notification body with folder context
+		const folderName = channel.folder?.name || 'Unknown Folder';
+		const notificationBody = event.description
+			? `${folderName} • ${event.description}`
+			: folderName;
+
 		waitUntil(
 			sendPushNotificationToChannels([event.channelId], {
 				title: event.title,
-				body: event.description || undefined,
+				body: notificationBody,
 				icon: event.icon || undefined,
 				tag: createdEvent.id,
 				data: {
 					eventId: createdEvent.id,
 					channelId: event.channelId,
-					url: `/channels/${event.channelId}`
+					folderId: channel.folderId,
+					url: `/events/${channel.folderId}/${event.channelId}`
 				}
 			}).catch((error) => {
 				// Log but don't fail the request if push notifications fail

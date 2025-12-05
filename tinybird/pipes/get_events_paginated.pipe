@@ -1,9 +1,9 @@
 DESCRIPTION >
     Get paginated list of events with optional filters.
-    Supports filtering by organization, site, channel, and date range.
+    Supports filtering by organization, folder, channel, and date range.
     Automatically enforces retention policy based on event's retention_tier.
     Returns events in reverse chronological order (newest first).
-    Hierarchy: organization -> site -> channel -> event
+    Hierarchy: organization -> folder -> channel -> event
 
 TOKEN "dashboard" READ
 
@@ -13,7 +13,7 @@ SQL >
     SELECT
         id,
         channel_id,
-        site_id,
+        folder_id,
         organization_id,
         title,
         description,
@@ -34,8 +34,8 @@ SQL >
             OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
             OR retention_tier = 'unlimited'
         )
-        {% if defined(site_id) %}
-            AND site_id = {{ String(site_id) }}
+        {% if defined(folder_id) %}
+            AND folder_id = {{ String(folder_id) }}
         {% end %}
         {% if defined(channel_id) %}
             AND channel_id = {{ String(channel_id) }}

@@ -64,6 +64,13 @@
       "when": 1764799164530,
       "tag": "0008_blue_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1764928914619,
+      "tag": "0009_high_beyonder",
+      "breakpoints": true
     }
   ]
 }

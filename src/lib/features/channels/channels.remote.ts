@@ -26,20 +26,20 @@ export const listChannelsQuery = query(listChannelsSchema, async (input) => {
 	});
 });
 
-const listChannelsBySiteSchema = paginationParamsSchema.extend({
-	siteId: z.string()
+const listChannelsByFolderSchema = paginationParamsSchema.extend({
+	folderId: z.string()
 });
 
-export const listChannelsBySiteQuery = query(listChannelsBySiteSchema, async (input) => {
-	const { listChannelsBySite } = await import('./server/repository');
-	return await listChannelsBySite(input.siteId, {
+export const listChannelsByFolderQuery = query(listChannelsByFolderSchema, async (input) => {
+	const { listChannelsByFolder } = await import('./server/repository');
+	return await listChannelsByFolder(input.folderId, {
 		page: input.page,
 		limit: input.limit
 	});
 });
 
 const createChannelSchema = z.object({
-	siteId: z.string(),
+	folderId: z.string(),
 	organizationId: z.string(),
 	name: z.string().min(3).max(255),
 	icon: z.string().optional(),
@@ -48,7 +48,7 @@ const createChannelSchema = z.object({
 
 export const createChannelCommand = command(createChannelSchema, async (input) => {
 	return await createChannel({
-		siteId: input.siteId,
+		folderId: input.folderId,
 		organizationId: input.organizationId,
 		name: input.name,
 		icon: input.icon,
@@ -58,7 +58,7 @@ export const createChannelCommand = command(createChannelSchema, async (input) =
 
 export const createChannelForm = form(createChannelSchema, async (input) => {
 	return await createChannel({
-		siteId: input.siteId,
+		folderId: input.folderId,
 		organizationId: input.organizationId,
 		name: input.name,
 		icon: input.icon,

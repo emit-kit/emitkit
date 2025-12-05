@@ -38,7 +38,7 @@ const createEventSchema = z.object({
 export const POST: RequestHandler = async (event) => {
 	const logger = createContextLogger('api-events');
 
-	return withAuth(event, async (orgId, siteId, apiKeyId, rateLimitInfo) => {
+	return withAuth(event, async (orgId, folderId, apiKeyId, rateLimitInfo) => {
 		try {
 			// Parse and validate the request body FIRST (can only be read once)
 			const body = await event.request.json();
@@ -78,8 +78,8 @@ export const POST: RequestHandler = async (event) => {
 				}
 			}
 
-			// Get or create the channel within the site
-			const channel = await getOrCreateChannel(validatedData.channelName, siteId, orgId, {
+			// Get or create the channel within the folder
+			const channel = await getOrCreateChannel(validatedData.channelName, folderId, orgId, {
 				icon: validatedData.icon,
 				description: validatedData.description
 			});
@@ -100,7 +100,7 @@ export const POST: RequestHandler = async (event) => {
 			// Create and broadcast the event
 			const createdEvent = await createAndBroadcastEvent({
 				channelId: channel.id,
-				siteId: siteId,
+				folderId: folderId,
 				organizationId: orgId,
 				title: validatedData.title,
 				description: validatedData.description,
@@ -165,7 +165,7 @@ export const POST: RequestHandler = async (event) => {
 		} catch (error) {
 			logger.error('Error creating event via API', error instanceof Error ? error : undefined, {
 				organizationId: orgId,
-				siteId,
+				folderId,
 				apiKeyId
 			});
 

@@ -4,8 +4,8 @@ export * from './auth';
 // Subscription tables
 export * from './subscription';
 
-// Site tables
-export * from './site';
+// Folder tables
+export * from './folder';
 
 export * from './channel';
 export * from './webhook';

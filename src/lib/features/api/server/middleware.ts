@@ -29,7 +29,7 @@ export async function withAuth(
 	event: RequestEvent<Record<string, string>>,
 	handler: (
 		orgId: string,
-		siteId: string,
+		folderId: string,
 		apiKeyId: string,
 		rateLimitInfo: RateLimitInfo
 	) => Promise<Response>
@@ -108,7 +108,7 @@ export async function withAuth(
 
 	/**
 	 * API Keys are bound to users, but upon creation, we enforce applying keys to an
-	 * organization ID and a site ID. Therefore, when verifying an API key, we can
+	 * organization ID and a folder ID. Therefore, when verifying an API key, we can
 	 * extract the organization ID from the key's metadata.
 	 */
 	operation.step('Verifying API key');
@@ -151,7 +151,7 @@ export async function withAuth(
 
 	operation.step('Extracting metadata from API key');
 	const orgId = response.key?.metadata?.orgId;
-	const siteId = response.key?.metadata?.siteId;
+	const folderId = response.key?.metadata?.folderId;
 	const apiKeyId = response.key?.id;
 
 	if (!orgId) {
@@ -186,9 +186,9 @@ export async function withAuth(
 		);
 	}
 
-	if (!siteId) {
+	if (!folderId) {
 		operation.error('Authentication failed', undefined, {
-			reason: 'siteId is missing from API key metadata',
+			reason: 'folderId is missing from API key metadata',
 			statusCode: 401,
 			apiKeyId
 		});
@@ -201,7 +201,7 @@ export async function withAuth(
 					method: event.request.method,
 					statusCode: 401,
 					error: 'UNAUTHORIZED',
-					reason: 'siteId is missing'
+					reason: 'folderId is missing'
 				})
 				.then(() => analytics.shutdown())
 		);
@@ -252,7 +252,7 @@ export async function withAuth(
 
 	operation.end({
 		organizationId: orgId,
-		siteId,
+		folderId,
 		apiKeyId
 	});
 
@@ -280,5 +280,5 @@ export async function withAuth(
 			: Math.floor(Date.now() / 1000) + 60
 	};
 
-	return handler(orgId, siteId, apiKeyId, rateLimitInfo);
+	return handler(orgId, folderId, apiKeyId, rateLimitInfo);
 }

@@ -8,13 +8,13 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import { authClient } from '$lib/client/auth/auth-client';
 	import { useCurrentOrganization } from 'better-auth-ui-svelte';
-	import type { Site } from '$lib/features/sites/types';
+	import type { Folder } from '$lib/features/folders/types';
 	import { page } from '$app/state';
 
 	let {
 		defaultSite
 	}: {
-		defaultSite: Site | null;
+		defaultSite: Folder | null;
 	} = $props();
 
 	const organization = useCurrentOrganization();

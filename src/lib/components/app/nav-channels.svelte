@@ -24,7 +24,7 @@
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton>
 							{#snippet child({ props })}
-								<a href="/{channel.siteId}/{channel.id}" {...props}>
+								<a href="/{channel.folderId}/{channel.id}" {...props}>
 									<HashIcon />
 
 									<span>{channel.name}</span>

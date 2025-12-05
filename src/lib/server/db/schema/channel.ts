@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm';
 import { pgTable, index, unique } from 'drizzle-orm/pg-core';
 import { createBetterAuthId } from './utils';
 import { organization } from './auth';
-import { site } from './site';
+import { folder } from './folder';
 import { webhook } from './webhook';
 
 export const channel = pgTable(
@@ -13,10 +13,10 @@ export const channel = pgTable(
 			.$defaultFn(() => createBetterAuthId('channel'))
 			.notNull()
 			.primaryKey(),
-		siteId: t
-			.text('site_id')
+		folderId: t
+			.text('folder_id')
 			.notNull()
-			.references(() => site.id, { onDelete: 'cascade' }),
+			.references(() => folder.id, { onDelete: 'cascade' }),
 		organizationId: t
 			.text('organization_id')
 			.notNull()
@@ -29,16 +29,16 @@ export const channel = pgTable(
 		updatedAt: t.timestamp('updated_at').notNull().defaultNow()
 	}),
 	(table) => ({
-		uniqueSiteName: unique().on(table.siteId, table.name),
-		idxSite: index('idx_channels_site').on(table.siteId),
+		uniqueFolderName: unique().on(table.folderId, table.name),
+		idxFolder: index('idx_channels_folder').on(table.folderId),
 		idxDeleted: index('idx_channels_deleted').on(table.deletedAt)
 	})
 );
 
 export const channelRelations = relations(channel, ({ one, many }) => ({
-	site: one(site, {
-		fields: [channel.siteId],
-		references: [site.id]
+	folder: one(folder, {
+		fields: [channel.folderId],
+		references: [folder.id]
 	}),
 	organization: one(organization, {
 		fields: [channel.organizationId],
@@ -49,4 +49,4 @@ export const channelRelations = relations(channel, ({ one, many }) => ({
 
 export type Channel = typeof channel.$inferSelect;
 export type ChannelInsert = typeof channel.$inferInsert;
-export type ChannelUpdate = Partial<Omit<ChannelInsert, 'siteId' | 'organizationId'>>;
+export type ChannelUpdate = Partial<Omit<ChannelInsert, 'folderId' | 'organizationId'>>;

@@ -1,7 +1,7 @@
 export type Event = {
 	id: string;
 	channelId: string;
-	siteId: string;
+	folderId: string;
 	organizationId: string;
 	title: string;
 	description: string | null;
@@ -18,7 +18,7 @@ export type Event = {
 export type EventInsert = {
 	id?: string;
 	channelId: string;
-	siteId: string;
+	folderId: string;
 	organizationId: string;
 	title: string;
 	description?: string | null;

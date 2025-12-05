@@ -1,9 +1,9 @@
 import type { PageServerLoad } from './$types';
-import { listSitesByOrg } from '$lib/features/sites/server/repository';
-import { listChannelsBySite } from '$lib/features/channels/server/repository';
+import { listFoldersByOrg } from '$lib/features/folders/server/repository';
+import { listChannelsByFolder } from '$lib/features/channels/server/repository';
 import { getUserPushSubscriptions } from '$lib/features/notifications/server';
-import type { SiteWithChannels } from '$lib/features/notifications/types';
-import type { Site } from '$lib/features/sites/types';
+import type { FolderWithChannels } from '$lib/features/notifications/types';
+import type { Folder } from '$lib/features/folders/types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { user, activeOrganization } = locals;
@@ -12,15 +12,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw new Error('Unauthorized');
 	}
 
-	// Fetch all sites for this organization
-	const sitesResult = await listSitesByOrg(activeOrganization.id, { page: 1, limit: 100 });
+	// Fetch all folders for this organization
+	const foldersResult = await listFoldersByOrg(activeOrganization.id, { page: 1, limit: 100 });
 
-	// Fetch channels for each site
-	const sitesWithChannels: SiteWithChannels[] = await Promise.all(
-		sitesResult.items.map(async (site: Site) => {
-			const channelsResult = await listChannelsBySite(site.id, { page: 1, limit: 100 });
+	// Fetch channels for each folder
+	const foldersWithChannels: FolderWithChannels[] = await Promise.all(
+		foldersResult.items.map(async (folder: Folder) => {
+			const channelsResult = await listChannelsByFolder(folder.id, { page: 1, limit: 100 });
 			return {
-				...site,
+				...folder,
 				channels: channelsResult.items
 			};
 		})
@@ -31,7 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const currentSubscription = subscriptions[0] || null; // Use first subscription for this device
 
 	return {
-		sites: sitesWithChannels,
+		folders: foldersWithChannels,
 		currentSubscription,
 		organizationId: activeOrganization.id,
 		userId: user.id

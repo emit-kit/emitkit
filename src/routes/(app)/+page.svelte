@@ -6,7 +6,7 @@
 	let { data }: PageProps = $props();
 
 	const defaultSite = $derived(
-		data.sites.find((site) => site.slug === 'default') || data.sites[0] || null
+		data.folders.find((folder) => folder.slug === 'default') || data.folders[0] || null
 	);
 
 	const hasEvents = $derived(data.events && data.events.items.length > 0);
@@ -37,18 +37,18 @@
 			<div class="mb-8">
 				<UnifiedEventFeed
 					initialEvents={data.events}
-					sites={data.sites}
+					sites={data.folders}
 					channels={data.channels}
 					organizationId={data.orgId}
 				/>
 			</div>
 
 			<!-- Quick Stats -->
-			{#if data.sites.length > 0}
+			{#if data.folders.length > 0}
 				<div class="mt-8 grid gap-4 md:grid-cols-3">
 					<div class="rounded-lg border p-4">
-						<div class="text-2xl font-bold">{data.sites.length}</div>
-						<div class="text-sm text-muted-foreground">Sites</div>
+						<div class="text-2xl font-bold">{data.folders.length}</div>
+						<div class="text-sm text-muted-foreground">Folders</div>
 					</div>
 					<div class="rounded-lg border p-4">
 						<div class="text-2xl font-bold">{data.channels.length}</div>

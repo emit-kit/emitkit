@@ -5,7 +5,7 @@ const TINYBIRD_BASE_URL = TINYBIRD_API_URL || 'https://api.tinybird.co';
 export interface TinybirdEvent {
 	id: string;
 	channel_id: string;
-	site_id: string;
+	folder_id: string;
 	organization_id: string;
 	retention_tier: string; // 'basic' | 'premium' | 'unlimited'
 	title: string;

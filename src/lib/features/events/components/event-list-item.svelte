@@ -22,8 +22,8 @@
 		channelId,
 		organizationId,
 		onDeleted,
-		siteName,
-		siteSlug,
+		folderName,
+		folderSlug,
 		channelName,
 		showChannelContext = false
 	}: {
@@ -32,8 +32,8 @@
 		channelId: string;
 		organizationId: string;
 		onDeleted?: () => void;
-		siteName?: string;
-		siteSlug?: string;
+		folderName?: string;
+		folderSlug?: string;
 		channelName?: string;
 		showChannelContext?: boolean;
 	} = $props();
@@ -103,8 +103,8 @@
 
 	// Navigate to channel view
 	function handleNavigateToChannel() {
-		if (event.siteId && event.channelId) {
-			goto(`/events/${event.siteId}/${event.channelId}`);
+		if (event.folderId && event.channelId) {
+			goto(`/events/${event.folderId}/${event.channelId}`);
 		}
 	}
 </script>
@@ -140,7 +140,7 @@
 				{/if}
 			</div>
 
-			{#if showChannelContext && (siteName || channelName)}
+			{#if showChannelContext && (folderName || channelName)}
 				<button
 					onclick={handleNavigateToChannel}
 					class="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
@@ -148,10 +148,10 @@
 				>
 					<HashIcon class="size-3" />
 					<span>
-						{#if siteName && channelName}
-							{siteName} / {channelName}
-						{:else if siteName}
-							{siteName}
+						{#if folderName && channelName}
+							{folderName} / {channelName}
+						{:else if folderName}
+							{folderName}
 						{:else if channelName}
 							{channelName}
 						{/if}

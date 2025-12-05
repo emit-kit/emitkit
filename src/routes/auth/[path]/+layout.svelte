@@ -11,7 +11,8 @@
 			authViewPaths.SIGN_UP,
 			authViewPaths.FORGOT_PASSWORD,
 			authViewPaths.RESET_PASSWORD,
-			authViewPaths.MAGIC_LINK
+			authViewPaths.MAGIC_LINK,
+			authViewPaths.EMAIL_OTP
 		].includes(params.path ?? '')
 	);
 </script>
