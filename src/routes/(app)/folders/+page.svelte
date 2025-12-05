@@ -9,13 +9,11 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import CopyIcon from '@lucide/svelte/icons/copy';
-	import KeyIcon from '@lucide/svelte/icons/key';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import FolderFavicon from '$lib/components/app/folder-favicon.svelte';
 	import { createFolderCommand, deleteFolderCommand } from '$lib/features/folders/folders.remote';
-	import { authClient } from '$lib/client/auth/auth-client';
 
 	let { data }: PageProps = $props();
 

@@ -2,15 +2,13 @@
 	import type { StackItemProps } from '@svelte-put/async-stack';
 	import { createChannelForm, suggestEmojiCommand } from '$lib/features/channels/channels.remote';
 	import * as Field from '$lib/components/ui/field/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as EmojiPicker from '$lib/components/ui/emoji-picker';
 	import * as Popover from '$lib/components/ui/popover';
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
-	import { cn } from '$lib/utils/utils';
 	import SmilePlusIcon from '@lucide/svelte/icons/smile-plus';
 	import SparklesIcon from '@lucide/svelte/icons/sparkles';
 

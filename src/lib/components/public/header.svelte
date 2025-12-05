@@ -9,7 +9,7 @@
 	import { navigationMenuTriggerStyle } from '$lib/components/ui/navigation-menu/navigation-menu-trigger.svelte';
 	import { cn } from '$lib/utils/ui.js';
 	import { Container } from '$lib/components/ui/container/index.js';
-	import { routes, authRoutes } from '$lib/utils/navigation';
+	import { authRoutes } from '$lib/utils/navigation';
 	import { useSiteConfig } from '$lib/hooks/use-site-config.svelte';
 	import { animate } from 'motion';
 	import { tv, type VariantProps } from 'tailwind-variants';
@@ -100,8 +100,6 @@
 	 * Svelte action for sticky header with smooth animations
 	 */
 	const stickyHeader: Action<HTMLElement> = (node: HTMLElement) => {
-		let lastScrollY = 0;
-
 		const handleScroll = () => {
 			const currentScrollY = window.scrollY;
 
@@ -128,8 +126,6 @@
 					);
 				}
 			}
-
-			lastScrollY = currentScrollY;
 		};
 
 		// Add scroll listener with passive flag for better performance

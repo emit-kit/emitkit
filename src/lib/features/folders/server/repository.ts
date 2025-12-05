@@ -39,13 +39,20 @@ export async function createFolder(data: Omit<FolderInsert, 'id'>): Promise<Fold
 	return newFolder;
 }
 
-export async function getFolderById(folderId: string, includeDeleted = false): Promise<Folder | null> {
+export async function getFolderById(
+	folderId: string,
+	includeDeleted = false
+): Promise<Folder | null> {
 	const conditions = [eq(folder.id, folderId)];
 	if (!includeDeleted) {
 		conditions.push(isNull(folder.deletedAt));
 	}
 
-	const [result] = await db.select().from(folder).where(and(...conditions)).limit(1);
+	const [result] = await db
+		.select()
+		.from(folder)
+		.where(and(...conditions))
+		.limit(1);
 
 	return result ?? null;
 }
@@ -60,7 +67,11 @@ export async function getFolderByIdAndOrg(
 		conditions.push(isNull(folder.deletedAt));
 	}
 
-	const [result] = await db.select().from(folder).where(and(...conditions)).limit(1);
+	const [result] = await db
+		.select()
+		.from(folder)
+		.where(and(...conditions))
+		.limit(1);
 
 	return result ?? null;
 }
@@ -75,7 +86,11 @@ export async function getFolderByOrgAndSlug(
 		conditions.push(isNull(folder.deletedAt));
 	}
 
-	const [result] = await db.select().from(folder).where(and(...conditions)).limit(1);
+	const [result] = await db
+		.select()
+		.from(folder)
+		.where(and(...conditions))
+		.limit(1);
 
 	return result ?? null;
 }
@@ -195,7 +210,10 @@ export async function hardDeleteFolder(folderId: string, orgId: string): Promise
 
 	if (result.length === 0) {
 		const error = new Error('Folder not found or access denied');
-		logger.error('Hard delete failed: folder not found or access denied', error, { folderId, orgId });
+		logger.error('Hard delete failed: folder not found or access denied', error, {
+			folderId,
+			orgId
+		});
 		throw error;
 	}
 

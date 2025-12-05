@@ -42,7 +42,7 @@
 	};
 
 	// Track loaded event IDs to prevent duplicates
-	let loadedEventIds = new Set<string>();
+	let loadedEventIds = $state(new Set<string>());
 
 	// Initialize with server-loaded events (not marked as new)
 	let allEvents = $state<EventWithNewStatus[]>([]);
@@ -168,7 +168,6 @@
 			}))
 			.filter((g) => g.events.length > 0);
 	});
-
 
 	onMount(() => {
 		const eventSource = new EventSource(`/stream`);

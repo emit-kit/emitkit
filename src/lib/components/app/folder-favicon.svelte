@@ -62,7 +62,9 @@
 			bind:this={imgElement}
 			src={imageUrl}
 			alt="Folder favicon"
-			class="rounded {sizeClasses[size]} {imageState === 'loading' ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200"
+			class="rounded {sizeClasses[size]} {imageState === 'loading'
+				? 'opacity-0'
+				: 'opacity-100'} transition-opacity duration-200"
 			onload={handleImageLoad}
 			onerror={handleImageError}
 			loading="lazy"
@@ -70,7 +72,13 @@
 	</div>
 {:else if fallbackIcon}
 	<!-- Fallback icon (emoji) -->
-	<span class="flex items-center justify-center {containerSizes[size]} text-{size === 'sm' ? 'xs' : size === 'md' ? 'sm' : 'base'}">
+	<span
+		class="flex items-center justify-center {containerSizes[size]} text-{size === 'sm'
+			? 'xs'
+			: size === 'md'
+				? 'sm'
+				: 'base'}"
+	>
 		{fallbackIcon}
 	</span>
 {:else}

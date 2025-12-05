@@ -119,7 +119,10 @@ export async function deleteFolder(folderId: string, orgId: string): Promise<voi
 		const existing = await folderRepo.getFolderByIdAndOrg(folderId, orgId, false);
 		if (!existing) {
 			const error = new Error('Folder not found or access denied');
-			logger.error('Folder deletion failed: not found or access denied', error, { folderId, orgId });
+			logger.error('Folder deletion failed: not found or access denied', error, {
+				folderId,
+				orgId
+			});
 			throw error;
 		}
 

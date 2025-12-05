@@ -27,15 +27,17 @@
 				organizationId: currentOrgId,
 				limit: 20,
 				page: 1
-			}).then((result) => {
-				query = result;
-				loadedEventIds = new Set(result.items.map((event) => event.id));
-				allEvents = result.items;
-				isLoading = false;
-			}).catch((error) => {
-				console.error('Failed to load events:', error);
-				isLoading = false;
-			});
+			})
+				.then((result) => {
+					query = result;
+					loadedEventIds = new Set(result.items.map((event) => event.id));
+					allEvents = result.items;
+					isLoading = false;
+				})
+				.catch((error) => {
+					console.error('Failed to load events:', error);
+					isLoading = false;
+				});
 		}
 	});
 
@@ -237,7 +239,9 @@
 	{#if isLoading}
 		<div class="flex items-center justify-center py-12">
 			<div class="flex flex-col items-center gap-3">
-				<div class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+				<div
+					class="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+				></div>
 				<p class="text-sm text-muted-foreground">Loading events...</p>
 			</div>
 		</div>

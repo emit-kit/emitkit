@@ -10,7 +10,7 @@
 		class?: string;
 	};
 
-	let { class: className, ...restProps }: ThemeSwitcherProps = $props();
+	let { class: className }: ThemeSwitcherProps = $props();
 
 	const themes = ['light', 'dark', 'system'] as const;
 	let mounted = $state(false);
@@ -45,7 +45,7 @@
 		</DropdownMenu.Trigger>
 
 		<DropdownMenu.Content align="start">
-			{#each themes as theme}
+			{#each themes as theme (theme)}
 				{@const ThemeIcon = getThemeIcon(theme)}
 				<DropdownMenu.Item onclick={() => setMode(theme)}>
 					<ThemeIcon class="mr-2 size-4" />

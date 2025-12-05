@@ -68,6 +68,7 @@
 		manifestUrl
 	}: Props = $props();
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let pwaInstallElement: any;
 
 	onMount(async () => {
@@ -86,7 +87,7 @@
 				console.log('❌ PWA installation failed:', event.detail.message);
 			});
 
-			pwaInstallElement.addEventListener('pwa-install-available-event', (event: CustomEvent) => {
+			pwaInstallElement.addEventListener('pwa-install-available-event', () => {
 				console.log('📲 PWA installation available');
 			});
 

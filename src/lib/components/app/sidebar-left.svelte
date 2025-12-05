@@ -17,9 +17,6 @@
 		...restProps
 	}: ComponentProps<typeof Sidebar.Root> = $props();
 
-	const session = authClient.useSession();
-	const user = $derived($session.data?.user);
-
 	const data = {
 		navMain: [
 			{

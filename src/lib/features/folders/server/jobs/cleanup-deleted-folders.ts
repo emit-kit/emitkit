@@ -99,9 +99,13 @@ export async function cleanupDeletedFolders(): Promise<{
 					apiKeysDeleted: deletedApiKeys.length
 				});
 			} catch (error) {
-				folderOperation.error('Failed to delete folder', error instanceof Error ? error : undefined, {
-					folderId: folderRecord.folderId
-				});
+				folderOperation.error(
+					'Failed to delete folder',
+					error instanceof Error ? error : undefined,
+					{
+						folderId: folderRecord.folderId
+					}
+				);
 				// Continue with next folder even if one fails
 			}
 		}

@@ -127,7 +127,11 @@
 		const result = await modal.resolution;
 
 		if (result && result.success && result.channelId) {
-			const channelResult = await listChannelsByFolderQuery({ folderId: folderId, page: 1, limit: 50 });
+			const channelResult = await listChannelsByFolderQuery({
+				folderId: folderId,
+				page: 1,
+				limit: 50
+			});
 			folderChannels[folderId] = { items: channelResult.items, loading: false };
 		}
 	}
@@ -207,112 +211,114 @@
 	<Sidebar.GroupContent>
 		<Sidebar.Menu>
 			{#each foldersData as folder (folder.id)}
-					<Collapsible.Root
-						open={openFolders.has(folder.id)}
-						onOpenChange={() => toggleFolder(folder.id)}
-						class="group/collapsible"
-					>
-						<Sidebar.MenuItem>
-							<div class="flex w-full items-center gap-1">
-								<Collapsible.Trigger class="flex-1">
-									{#snippet child({ props })}
-										<Sidebar.MenuButton {...props} class="w-full">
-											<ChevronRightIcon
-												class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-											/>
-											<FolderFavicon url={folder.url} fallbackIcon={folder.icon} size="sm" />
-											<span class="flex-1 text-left">{folder.name}</span>
-										</Sidebar.MenuButton>
-									{/snippet}
-								</Collapsible.Trigger>
+				<Collapsible.Root
+					open={openFolders.has(folder.id)}
+					onOpenChange={() => toggleFolder(folder.id)}
+					class="group/collapsible"
+				>
+					<Sidebar.MenuItem>
+						<div class="flex w-full items-center gap-1">
+							<Collapsible.Trigger class="flex-1">
+								{#snippet child({ props })}
+									<Sidebar.MenuButton {...props} class="w-full">
+										<ChevronRightIcon
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+										<FolderFavicon url={folder.url} fallbackIcon={folder.icon} size="sm" />
+										<span class="flex-1 text-left">{folder.name}</span>
+									</Sidebar.MenuButton>
+								{/snippet}
+							</Collapsible.Trigger>
 
-								<!-- Folder Actions Menu -->
-								<FolderActionsMenu
-									{folder}
-									onRename={handleRenameFolder}
-									onDelete={handleDeleteFolder}
-								/>
-							</div>
-							<Collapsible.Content>
-								<Sidebar.MenuSub>
-									{#if folderChannels[folder.id]?.loading}
-										<Sidebar.MenuSubItem>
-											<span class="text-sm text-muted-foreground">Loading channels...</span>
-										</Sidebar.MenuSubItem>
-									{:else if folderChannels[folder.id]?.items?.length > 0}
-										{#each folderChannels[folder.id].items as channel (channel.id)}
-											<Sidebar.MenuSubItem>
-												<Sidebar.MenuSubButton>
-													{#snippet child({ props })}
-														<a href="/events/{folder.id}/{channel.id}" {...props}>
-															<HashIcon />
-															<span>{channel.name}</span>
-														</a>
-													{/snippet}
-												</Sidebar.MenuSubButton>
-											</Sidebar.MenuSubItem>
-										{/each}
-									{:else if folderChannels[folder.id]}
-										<Sidebar.MenuSubItem>
-											<span class="text-sm text-muted-foreground">No channels yet</span>
-										</Sidebar.MenuSubItem>
-									{/if}
-
-									<!-- Add Channel Button -->
+							<!-- Folder Actions Menu -->
+							<FolderActionsMenu
+								{folder}
+								onRename={handleRenameFolder}
+								onDelete={handleDeleteFolder}
+							/>
+						</div>
+						<Collapsible.Content>
+							<Sidebar.MenuSub>
+								{#if folderChannels[folder.id]?.loading}
 									<Sidebar.MenuSubItem>
-										<Sidebar.MenuSubButton
-											class="text-sidebar-foreground/70"
-											onclick={(e) => handleNewChannel(e, folder.id)}
-										>
-											<PlusIcon />
-											<span>New Channel</span>
-										</Sidebar.MenuSubButton>
+										<span class="text-sm text-muted-foreground">Loading channels...</span>
 									</Sidebar.MenuSubItem>
-								</Sidebar.MenuSub>
-							</Collapsible.Content>
-						</Sidebar.MenuItem>
-					</Collapsible.Root>
+								{:else if folderChannels[folder.id]?.items?.length > 0}
+									{#each folderChannels[folder.id].items as channel (channel.id)}
+										<Sidebar.MenuSubItem>
+											<Sidebar.MenuSubButton>
+												{#snippet child({ props })}
+													<a href="/events/{folder.id}/{channel.id}" {...props}>
+														<HashIcon />
+														<span>{channel.name}</span>
+													</a>
+												{/snippet}
+											</Sidebar.MenuSubButton>
+										</Sidebar.MenuSubItem>
+									{/each}
+								{:else if folderChannels[folder.id]}
+									<Sidebar.MenuSubItem>
+										<span class="text-sm text-muted-foreground">No channels yet</span>
+									</Sidebar.MenuSubItem>
+								{/if}
+
+								<!-- Add Channel Button -->
+								<Sidebar.MenuSubItem>
+									<Sidebar.MenuSubButton
+										class="text-sidebar-foreground/70"
+										onclick={(e) => handleNewChannel(e, folder.id)}
+									>
+										<PlusIcon />
+										<span>New Channel</span>
+									</Sidebar.MenuSubButton>
+								</Sidebar.MenuSubItem>
+							</Sidebar.MenuSub>
+						</Collapsible.Content>
+					</Sidebar.MenuItem>
+				</Collapsible.Root>
 			{/each}
 
 			<!-- Archived Folders Section -->
 			{#if deletedFoldersData.length > 0}
-					<Collapsible.Root bind:open={showDeletedFolders} class="group/archived-collapsible mt-4">
-						<Sidebar.MenuItem>
-							<Collapsible.Trigger class="flex-1">
-								{#snippet child({ props })}
-									<Sidebar.MenuButton {...props} class="w-full text-muted-foreground">
-										<ChevronRightIcon
-											class="transition-transform duration-200 group-data-[state=open]/archived-collapsible:rotate-90"
-										/>
-										<FolderIcon class="size-4" />
-										<span class="flex-1 text-left">Archived Folders ({deletedFoldersData.length})</span>
-									</Sidebar.MenuButton>
-								{/snippet}
-							</Collapsible.Trigger>
-							<Collapsible.Content>
-								<Sidebar.MenuSub>
-									{#each deletedFoldersData as folder (folder.id)}
-										<Sidebar.MenuSubItem>
-											<div class="flex w-full items-center gap-2">
-												<div class="flex flex-1 items-center gap-2 opacity-60">
-													<FolderFavicon url={folder.url} fallbackIcon={folder.icon} size="sm" />
-													<span>{folder.name}</span>
-												</div>
-												<button
-													type="button"
-													class="rounded-md p-1 hover:bg-accent"
-													onclick={(e) => handleRestoreFolder(e, folder.id, folder.name)}
-													aria-label="Restore folder"
-												>
-													<span class="text-xs">Restore</span>
-												</button>
+				<Collapsible.Root bind:open={showDeletedFolders} class="group/archived-collapsible mt-4">
+					<Sidebar.MenuItem>
+						<Collapsible.Trigger class="flex-1">
+							{#snippet child({ props })}
+								<Sidebar.MenuButton {...props} class="w-full text-muted-foreground">
+									<ChevronRightIcon
+										class="transition-transform duration-200 group-data-[state=open]/archived-collapsible:rotate-90"
+									/>
+									<FolderIcon class="size-4" />
+									<span class="flex-1 text-left"
+										>Archived Folders ({deletedFoldersData.length})</span
+									>
+								</Sidebar.MenuButton>
+							{/snippet}
+						</Collapsible.Trigger>
+						<Collapsible.Content>
+							<Sidebar.MenuSub>
+								{#each deletedFoldersData as folder (folder.id)}
+									<Sidebar.MenuSubItem>
+										<div class="flex w-full items-center gap-2">
+											<div class="flex flex-1 items-center gap-2 opacity-60">
+												<FolderFavicon url={folder.url} fallbackIcon={folder.icon} size="sm" />
+												<span>{folder.name}</span>
 											</div>
-										</Sidebar.MenuSubItem>
-									{/each}
-								</Sidebar.MenuSub>
-							</Collapsible.Content>
-						</Sidebar.MenuItem>
-					</Collapsible.Root>
+											<button
+												type="button"
+												class="rounded-md p-1 hover:bg-accent"
+												onclick={(e) => handleRestoreFolder(e, folder.id, folder.name)}
+												aria-label="Restore folder"
+											>
+												<span class="text-xs">Restore</span>
+											</button>
+										</div>
+									</Sidebar.MenuSubItem>
+								{/each}
+							</Sidebar.MenuSub>
+						</Collapsible.Content>
+					</Sidebar.MenuItem>
+				</Collapsible.Root>
 			{/if}
 		</Sidebar.Menu>
 	</Sidebar.GroupContent>

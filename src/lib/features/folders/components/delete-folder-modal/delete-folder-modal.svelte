@@ -59,8 +59,8 @@
 				Archive Folder
 			</Dialog.Title>
 			<Dialog.Description>
-				This will archive the folder and make it inaccessible. The folder can be restored within your
-				organization's retention period.
+				This will archive the folder and make it inaccessible. The folder can be restored within
+				your organization's retention period.
 			</Dialog.Description>
 		</Dialog.Header>
 

@@ -11,7 +11,7 @@
 </script>
 
 <dl class="grid gap-3">
-	{#each Object.entries(metadata) as [key, value], index}
+	{#each Object.entries(metadata) as [key, value], index (key)}
 		<div class="grid gap-1" use:motion={animations.fadeInUp(index * 0.04)}>
 			<dt class="text-xs font-medium text-foreground/70">
 				{key

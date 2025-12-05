@@ -37,7 +37,7 @@
 		{/snippet}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
-		<DropdownMenu.Item onclick={handleRename}> Rename folder </DropdownMenu.Item>
+		<DropdownMenu.Item onclick={handleRename}>Rename folder</DropdownMenu.Item>
 		<DropdownMenu.Separator />
 		<DropdownMenu.Item onclick={handleDelete} class="text-destructive focus:text-destructive">
 			Archive folder

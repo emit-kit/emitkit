@@ -23,7 +23,6 @@
 		organizationId,
 		onDeleted,
 		folderName,
-		folderSlug,
 		channelName,
 		showChannelContext = false
 	}: {
@@ -33,7 +32,6 @@
 		organizationId: string;
 		onDeleted?: () => void;
 		folderName?: string;
-		folderSlug?: string;
 		channelName?: string;
 		showChannelContext?: boolean;
 	} = $props();
@@ -143,7 +141,7 @@
 			{#if showChannelContext && (folderName || channelName)}
 				<button
 					onclick={handleNavigateToChannel}
-					class="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+					class="flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
 					type="button"
 				>
 					<HashIcon class="size-3" />

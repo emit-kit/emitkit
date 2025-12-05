@@ -25,7 +25,10 @@ function formatDateForTinybird(date: Date): string {
 // Convert EventInsert (Drizzle schema) to TinybirdEvent
 // Note: Requires folderId to be passed in or fetched from channel
 // Note: Fetches organization's retention_tier for event-time retention snapshot
-async function eventInsertToTinybird(event: EventInsert, folderId?: string): Promise<TinybirdEvent> {
+async function eventInsertToTinybird(
+	event: EventInsert,
+	folderId?: string
+): Promise<TinybirdEvent> {
 	// If folderId not provided, fetch from channel
 	let resolvedFolderId = folderId;
 	if (!resolvedFolderId) {

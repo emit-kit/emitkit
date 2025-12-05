@@ -32,15 +32,6 @@ export const admin = ac.newRole({
 
 export const adminStatements = admin.statements;
 
-const _defaultMemberStatements = {
-	// No organization permissions
-	// No member management permissions
-	// No invitation permissions - this prevents them from inviting users
-	// Optionally, you might want to give them team permissions if they can manage teams they're part of
-	team: ['create'] // Optional: let them create teams
-	// No 'ac' permissions
-};
-
 export const member = ac.newRole({
 	// memberAc.statements.organization - Members have NO organization permissions
 	// (deliberately not including)

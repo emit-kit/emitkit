@@ -14,18 +14,12 @@
 	import { emailConfig } from './email.config';
 
 	interface Props {
-		email: string;
 		otp: string;
 		type: 'sign-in' | 'email-verification' | 'forget-password';
 		isMobile?: boolean;
 	}
 
-	let {
-		email = 'panic@thedis.co',
-		otp = '123456',
-		type = 'sign-in',
-		isMobile = false
-	}: Props = $props();
+	let { otp = '123456', type = 'sign-in', isMobile = false }: Props = $props();
 
 	const titles = {
 		'sign-in': 'Sign in to your account',

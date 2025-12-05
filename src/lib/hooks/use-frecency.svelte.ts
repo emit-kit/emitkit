@@ -41,8 +41,8 @@ export class UseFrecency {
 
 	get items() {
 		return Array.from(Object.entries(this.#items.current))
-			.filter(([_a, a]) => a !== undefined)
-			.sort(([_a, a], [_b, b]) => {
+			.filter(([, a]) => a !== undefined)
+			.sort(([, a], [, b]) => {
 				if (a!.uses > b!.uses) return -1;
 
 				if (b!.uses > a!.uses) return 1;

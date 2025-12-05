@@ -127,8 +127,8 @@
 			<div class="ml-2">
 				<p class="font-semibold">Notifications blocked</p>
 				<p class="text-sm">
-					You've blocked notifications for this folder. Please enable them in your browser settings to
-					receive notifications.
+					You've blocked notifications for this folder. Please enable them in your browser settings
+					to receive notifications.
 				</p>
 			</div>
 		</Alert>

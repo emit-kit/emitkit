@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Wrapper, type WrapperProps } from '$lib/components/ui/wrapper';
-	import { animations, motion } from '$lib/utils/motion';
 	import { cn } from '$lib/utils/ui.js';
 
 	let {

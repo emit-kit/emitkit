@@ -6,7 +6,7 @@
 	import { box } from 'svelte-toolbelt';
 	import { useEmojiPickerSkinToneSelector } from './emoji-picker.svelte.js';
 	import type { EmojiPickerSkinProps } from './types.js';
-	import { Button, type ButtonProps } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils/utils.js';
 
 	let {
@@ -29,6 +29,7 @@
 	{size}
 	class={cn('size-8', className)}
 	onclick={(e) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		onclick?.(e as any);
 		skinState.cycleSkinTone();
 	}}

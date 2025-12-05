@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { useSiteConfig } from '$lib/hooks/use-site-config.svelte';
 	import { cn } from '$lib/utils/ui';
 	import type { WithElementRef } from 'bits-ui';
 	import type { HTMLAnchorAttributes, HTMLAttributes } from 'svelte/elements';
@@ -9,7 +8,7 @@
 			wrapperClass?: string;
 		};
 
-	let { class: className, wrapperClass, href = '/', ...restProps }: Props = $props();
+	let { wrapperClass, href = '/' }: Props = $props();
 
 	const computedWrapperClass = $derived(
 		cn(
@@ -17,8 +16,6 @@
 			wrapperClass
 		)
 	);
-
-	const config = useSiteConfig();
 </script>
 
 {#if href}

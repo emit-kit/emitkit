@@ -35,7 +35,7 @@ export async function withCache<T>(
 				const parsed = JSON.parse(cached as string) as T;
 				logger.info('Cache hit', { key: cacheKey });
 				return parsed;
-			} catch (parseError) {
+			} catch {
 				// Cache contains malformed JSON - invalidate it
 				logger.warn('Cache contains malformed JSON, invalidating', {
 					key: cacheKey,

@@ -21,7 +21,8 @@ declare const __DEPLOYMENT_ID__: string | undefined;
 
 // Cache name includes both SvelteKit version and deployment ID for proper cache busting
 // Falls back to timestamp if __DEPLOYMENT_ID__ is not available
-const DEPLOYMENT_ID = typeof __DEPLOYMENT_ID__ !== 'undefined' ? __DEPLOYMENT_ID__ : `dev-${Date.now()}`;
+const DEPLOYMENT_ID =
+	typeof __DEPLOYMENT_ID__ !== 'undefined' ? __DEPLOYMENT_ID__ : `dev-${Date.now()}`;
 const CACHE_NAME = `cache-${version}-${DEPLOYMENT_ID}`;
 const ASSETS = [...build, ...files];
 

@@ -14,11 +14,10 @@
 	import { emailConfig } from './email.config';
 
 	interface Props {
-		email: string;
 		url: string;
 	}
 
-	let { email = 'panic@thedis.co', url = 'https://thedis.co' }: Props = $props();
+	let { url = 'https://thedis.co' }: Props = $props();
 </script>
 
 <Html>

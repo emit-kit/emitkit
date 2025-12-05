@@ -2,7 +2,6 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '$lib/utils/ui.js';
-	import { motion, animations } from '$lib/utils/motion';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		children?: Snippet;
