@@ -46,6 +46,7 @@
 		"db:studio": "drizzle-kit studio",
 		"clear-cache": "rm -rf node_modules/.vite && rm -rf .svelte-kit",
 		"vite-node": "vite-node --options.transformMode.ssr='/.*/' ",
+		"qstash": "pnpm dlx @upstash/qstash-cli dev",
 		"openapi:lint": "redocly lint openapi/openapi.yaml",
 		"openapi:bundle": "redocly bundle openapi/openapi.yaml -o openapi/openapi.json"
 	},

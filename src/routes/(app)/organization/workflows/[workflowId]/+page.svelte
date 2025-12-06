@@ -26,10 +26,17 @@
 	let { data }: { data: PageData } = $props();
 
 	// Workflow metadata state (editable)
-	let workflowName = $state(data.workflow.name);
-	let workflowDescription = $state(data.workflow.description || '');
-	let workflowEnabled = $state(data.workflow.enabled);
+	let workflowName = $derived(data.workflow.name);
+	let workflowDescription = $derived(data.workflow.description || '');
+	let workflowEnabled = $derived(data.workflow.enabled);
 	let isSavingMetadata = $state(false);
+
+	// Sync state with prop changes (e.g., when navigating between workflows)
+	$effect(() => {
+		workflowName = data.workflow.name;
+		workflowDescription = data.workflow.description || '';
+		workflowEnabled = data.workflow.enabled;
+	});
 
 	// Selected node for configuration
 	let selectedNode = $state<Node<WorkflowNode['data'], WorkflowNode['type']> | null>(null);
@@ -141,15 +148,22 @@
 		const centerY = 300;
 		const randomOffset = () => Math.floor(Math.random() * 100) - 50;
 
-		workflowStore.addNode(nodeTemplate.type, { x: centerX + randomOffset(), y: centerY + randomOffset() }, {
-			label: nodeTemplate.label,
-			description: nodeTemplate.description,
-			config: nodeTemplate.config
-		});
+		workflowStore.addNode(
+			nodeTemplate.type,
+			{ x: centerX + randomOffset(), y: centerY + randomOffset() },
+			{
+				label: nodeTemplate.label,
+				description: nodeTemplate.description,
+				config: nodeTemplate.config
+			}
+		);
 	}
 
 	// Handle drag start for node palette
-	function handleDragStart(event: DragEvent, nodeTemplate: (typeof triggerNodes)[0] | (typeof actionNodes)[0]) {
+	function handleDragStart(
+		event: DragEvent,
+		nodeTemplate: (typeof triggerNodes)[0] | (typeof actionNodes)[0]
+	) {
 		if (!event.dataTransfer) return;
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('application/json', JSON.stringify(nodeTemplate));
@@ -158,7 +172,7 @@
 
 <div class="flex h-screen flex-col">
 	<!-- Top Toolbar -->
-	<div class="border-b bg-white">
+	<div class="border-b bg-card">
 		<div class="flex items-center justify-between px-4 py-3">
 			<div class="flex items-center gap-4">
 				<Button variant="ghost" size="sm" onclick={() => goto('/organization/workflows')}>
@@ -187,11 +201,7 @@
 
 			<div class="flex items-center gap-2">
 				<div class="flex items-center gap-2">
-					<Switch
-						id="enabled"
-						bind:checked={workflowEnabled}
-						onchange={saveMetadata}
-					/>
+					<Switch id="enabled" bind:checked={workflowEnabled} onchange={saveMetadata} />
 					<Label for="enabled" class="text-sm">Enable</Label>
 				</div>
 				<Separator orientation="vertical" class="h-6" />
@@ -211,18 +221,20 @@
 	<!-- Main Content -->
 	<div class="flex flex-1 overflow-hidden">
 		<!-- Left Sidebar - Node Palette -->
-		<div class="w-64 overflow-y-auto border-r bg-gray-50 p-4">
+		<div class="w-64 overflow-y-auto border-r bg-muted/30 p-4">
 			<div class="space-y-6">
 				<!-- Triggers Section -->
 				<div>
-					<h3 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+					<h3
+						class="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-foreground/70 uppercase"
+					>
 						<PlayIcon class="h-4 w-4" />
 						Triggers
 					</h3>
 					<div class="space-y-2">
 						{#each triggerNodes as node (node.label)}
 							<Card.Root
-								class="cursor-move transition-colors hover:border-indigo-400 hover:bg-white"
+								class="cursor-move transition-colors hover:border-indigo-400 hover:bg-card"
 								draggable="true"
 								ondragstart={(e) => handleDragStart(e, node)}
 								onclick={() => addNode(node)}
@@ -240,14 +252,16 @@
 
 				<!-- Actions Section -->
 				<div>
-					<h3 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+					<h3
+						class="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-foreground/70 uppercase"
+					>
 						<ZapIcon class="h-4 w-4" />
 						Actions
 					</h3>
 					<div class="space-y-2">
 						{#each actionNodes as node (node.label)}
 							<Card.Root
-								class="cursor-move transition-colors hover:border-purple-400 hover:bg-white"
+								class="cursor-move transition-colors hover:border-purple-400 hover:bg-card"
 								draggable="true"
 								ondragstart={(e) => handleDragStart(e, node)}
 								onclick={() => addNode(node)}
@@ -280,10 +294,10 @@
 
 		<!-- Right Sidebar - Node Configuration -->
 		{#if showRightSidebar && selectedNode}
-			<div class="w-80 overflow-y-auto border-l bg-white p-4">
+			<div class="w-80 overflow-y-auto border-l bg-card p-4">
 				<div class="space-y-4">
 					<div class="flex items-center gap-2">
-						<SettingsIcon class="h-5 w-5 text-gray-600" />
+						<SettingsIcon class="h-5 w-5 text-muted-foreground" />
 						<h3 class="text-lg font-semibold">Node Configuration</h3>
 					</div>
 
@@ -321,11 +335,11 @@
 						</div>
 
 						<!-- Node-specific config would go here -->
-						<div class="rounded-lg bg-gray-50 p-3">
-							<p class="text-xs text-gray-600">
+						<div class="rounded-lg bg-muted p-3">
+							<p class="text-xs text-muted-foreground">
 								Node type: <strong>{selectedNode.type}</strong>
 							</p>
-							<p class="mt-1 text-xs text-gray-500">
+							<p class="mt-1 text-xs text-muted-foreground">
 								Additional configuration options will be displayed here based on the node type.
 							</p>
 						</div>

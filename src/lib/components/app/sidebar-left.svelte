@@ -24,6 +24,12 @@
 				url: '/',
 				icon: HouseIcon,
 				isActive: true
+			},
+			{
+				title: 'Workflows',
+				url: '/organization/workflows',
+				icon: HouseIcon,
+				isActive: true
 			}
 		],
 		navSecondary: [

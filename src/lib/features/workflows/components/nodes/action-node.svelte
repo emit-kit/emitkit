@@ -16,22 +16,22 @@
 
 	// Status color mapping
 	const statusColors = {
-		idle: 'bg-gray-100 border-gray-300',
-		running: 'bg-blue-50 border-blue-400',
-		success: 'bg-green-50 border-green-400',
-		error: 'bg-red-50 border-red-400'
+		idle: 'bg-card border-border',
+		running: 'bg-blue-100/20 border-blue-400 dark:bg-blue-900/20',
+		success: 'bg-green-100/20 border-green-400 dark:bg-green-900/20',
+		error: 'bg-red-100/20 border-red-400 dark:bg-red-900/20'
 	};
 
 	const statusColor = $derived(statusColors[data?.status ?? 'idle']);
 
 	// Action type icon/color mapping
 	const actionStyles = {
-		slack: { bg: 'bg-purple-100', text: 'text-purple-600' },
-		discord: { bg: 'bg-blue-100', text: 'text-blue-600' },
-		email: { bg: 'bg-orange-100', text: 'text-orange-600' },
-		http: { bg: 'bg-green-100', text: 'text-green-600' },
-		condition: { bg: 'bg-yellow-100', text: 'text-yellow-600' },
-		unknown: { bg: 'bg-gray-100', text: 'text-gray-600' }
+		slack: { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-600 dark:text-purple-400' },
+		discord: { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-600 dark:text-blue-400' },
+		email: { bg: 'bg-orange-100 dark:bg-orange-900/50', text: 'text-orange-600 dark:text-orange-400' },
+		http: { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-600 dark:text-green-400' },
+		condition: { bg: 'bg-yellow-100 dark:bg-yellow-900/50', text: 'text-yellow-600 dark:text-yellow-400' },
+		unknown: { bg: 'bg-muted', text: 'text-muted-foreground' }
 	};
 
 	const actionStyle = $derived(
@@ -40,7 +40,7 @@
 </script>
 
 <div
-	class="min-w-[200px] rounded-lg border-2 bg-white p-4 shadow-md transition-all {statusColor}"
+	class="min-w-[200px] rounded-lg border-2 p-4 shadow-md transition-all {statusColor}"
 	class:ring-2={selected}
 	class:ring-blue-500={selected}
 >
@@ -50,15 +50,15 @@
 			<ZapIcon class="h-4 w-4 {actionStyle.text}" />
 		</div>
 		<div class="flex-1">
-			<div class="text-xs font-medium uppercase tracking-wide text-gray-500">Action</div>
+			<div class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Action</div>
 		</div>
 	</div>
 
 	<!-- Content -->
 	<div class="mb-2">
-		<div class="font-semibold text-gray-900">{data?.label ?? 'Action'}</div>
+		<div class="font-semibold text-foreground">{data?.label ?? 'Action'}</div>
 		{#if data?.description}
-			<div class="mt-1 text-xs text-gray-600">{data.description}</div>
+			<div class="mt-1 text-xs text-muted-foreground">{data.description}</div>
 		{/if}
 	</div>
 
@@ -75,19 +75,19 @@
 	<Handle
 		type="target"
 		position={Position.Left}
-		class="!h-3 !w-3 !border-2 !border-gray-600 !bg-gray-100"
+		class="!h-3 !w-3 !border-2 !border-foreground/60 !bg-muted"
 	/>
 
 	<!-- Output Handle (also source for chaining actions) -->
 	<Handle
 		type="source"
 		position={Position.Right}
-		class="!h-3 !w-3 !border-2 !border-gray-600 !bg-gray-100"
+		class="!h-3 !w-3 !border-2 !border-foreground/60 !bg-muted"
 	/>
 </div>
 
 <style>
 	:global(.svelte-flow__handle) {
-		background: white;
+		background: hsl(var(--card));
 	}
 </style>

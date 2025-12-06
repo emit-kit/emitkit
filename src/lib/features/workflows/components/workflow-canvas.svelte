@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { SvelteFlow, Controls, Background, MiniMap, useSvelteFlow } from '@xyflow/svelte';
+	import {
+		SvelteFlow,
+		Controls,
+		Background,
+		MiniMap,
+		useSvelteFlow,
+		type ColorMode
+	} from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import type { Node, Edge, Connection, NodeTypes } from '@xyflow/svelte';
 	import { workflowStore } from '$lib/features/workflows/stores/workflow-store.svelte';
@@ -7,6 +14,7 @@
 	import TriggerNode from './nodes/trigger-node.svelte';
 	import ActionNode from './nodes/action-node.svelte';
 	import { untrack } from 'svelte';
+	import { mode } from 'mode-watcher';
 
 	interface Props {
 		workflowId: string;
@@ -30,7 +38,38 @@
 		onCanvasClick
 	}: Props = $props();
 
-	// Initialize workflow store once on mount
+	// Initialize workflow store once on mount and load initial data
+	// Convert initialNodes/initialEdges to XYFlow format for canvas
+	const initialXYFlowNodes: Node<WorkflowNode['data'], WorkflowNode['type']>[] = initialNodes.map(
+		(node) => ({
+			id: node.id,
+			type: node.type,
+			position: node.position,
+			data: node.data,
+			selected: node.selected
+		})
+	);
+
+	const initialXYFlowEdges: Edge<WorkflowEdge>[] = initialEdges.map((edge) => ({
+		id: edge.id,
+		source: edge.source,
+		target: edge.target,
+		type: edge.type,
+		selected: edge.selected
+	}));
+
+	// Local state for XYFlow - use $state.raw as per Svelte Flow docs
+	// Initialize with data immediately (no $effect needed)
+	let nodes = $state.raw<Node<WorkflowNode['data'], WorkflowNode['type']>[]>(initialXYFlowNodes);
+	let edges = $state.raw<Edge<WorkflowEdge>[]>(initialXYFlowEdges);
+
+	$inspect('[CANVAS] Initialized with:', {
+		workflowId,
+		nodes: nodes.length,
+		edges: edges.length
+	});
+
+	// Initialize store with the same data
 	$effect(() => {
 		workflowStore.initialize(workflowId, initialNodes, initialEdges);
 
@@ -40,38 +79,9 @@
 		};
 	});
 
-	// Local state for XYFlow - use $state.raw as per Svelte Flow docs
-	// These are bound to SvelteFlow with bind:nodes and bind:edges
-	let nodes = $state.raw<Node<WorkflowNode['data'], WorkflowNode['type']>[]>([]);
-	let edges = $state.raw<Edge<WorkflowEdge>[]>([]);
-
-	// Sync FROM store TO canvas (when store changes externally, like addNode)
-	$effect(() => {
-		// Read from store (create dependency)
-		const storeNodes = workflowStore.nodes;
-		const storeEdges = workflowStore.edges;
-
-		// Write to local state without triggering the other effect
-		untrack(() => {
-			nodes = storeNodes;
-			edges = storeEdges;
-		});
-	});
-
-	// Sync FROM canvas TO store (when user drags/deletes nodes via canvas)
-	$effect(() => {
-		// Read from local state (create dependency on user interactions)
-		const currentNodes = nodes;
-		const currentEdges = edges;
-
-		// Write to store without triggering the other effect
-		untrack(() => {
-			if (currentNodes.length > 0 || currentEdges.length > 0) {
-				workflowStore.setNodes(currentNodes);
-				workflowStore.setEdges(currentEdges);
-			}
-		});
-	});
+	// Get current color mode for dark mode support
+	// mode.current is already reactive, no need for $derived
+	const colorMode = mode.current as ColorMode;
 
 	// Define custom node types
 	const nodeTypes: NodeTypes = {
@@ -79,8 +89,8 @@
 		action: ActionNode
 	};
 
-	// Handle new connection - onbeforeconnect allows us to validate before connecting
-	function handleConnect(connection: Connection) {
+	// Validate connection before it's created
+	function handleBeforeConnect(connection: Connection) {
 		if (readonly) {
 			return false;
 		}
@@ -99,9 +109,27 @@
 			return false;
 		}
 
-		// Add edge through store (which will sync back to canvas via $derived)
-		workflowStore.addEdge(connection);
+		// Return connection to allow it
 		return connection;
+	}
+
+	// Handle successful connection - this is called AFTER the edge is added to the edges array
+	function handleConnect(connection: Connection) {
+		console.log('[CONNECT] Connection made:', {
+			source: connection.source,
+			target: connection.target,
+			totalEdges: edges.length
+		});
+
+		// The edge has been added to the edges array by Svelte Flow
+		// Now explicitly sync to the store to ensure it's saved
+		workflowStore.setEdges(edges);
+	}
+
+	// Handle node drag stop - sync position changes to store
+	function handleNodeDragStop() {
+		console.log('[NODE DRAG STOP] Syncing node positions to store');
+		workflowStore.setNodes(nodes);
 	}
 
 	// Handle node click
@@ -134,6 +162,13 @@
 
 			selectedNodes.forEach((node) => workflowStore.deleteNode(node.id));
 			selectedEdges.forEach((edge) => workflowStore.deleteEdge(edge.id));
+
+			// Manually sync canvas after deletion
+			if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+				console.log('[DELETE] Manually syncing canvas after deletion');
+				nodes = [...workflowStore.nodes];
+				edges = [...workflowStore.edges];
+			}
 		}
 
 		// Save workflow
@@ -169,14 +204,35 @@
 				y: event.clientY
 			});
 
-			// Add the node to the workflow
-			workflowStore.addNode(nodeData.type, position, {
+			console.log('[DROP] Adding node:', {
+				type: nodeData.type,
+				label: nodeData.label,
+				position
+			});
+
+			// Add the node to the workflow store
+			const newNode = workflowStore.addNode(nodeData.type, position, {
 				label: nodeData.label,
 				description: nodeData.description,
 				config: nodeData.config
 			});
+
+			console.log('[DROP] Node added to store:', {
+				id: newNode.id,
+				storeNodesCount: workflowStore.nodes.length
+			});
+
+			// Manually sync canvas with store since we're using $state.raw()
+			console.log('[DROP] Manually syncing canvas with store');
+			nodes = [...workflowStore.nodes];
+			edges = [...workflowStore.edges];
+
+			console.log('[DROP] Canvas updated:', {
+				canvasNodesCount: nodes.length,
+				canvasEdgesCount: edges.length
+			});
 		} catch (error) {
-			console.error('Failed to drop node:', error);
+			console.error('[DROP] Failed to drop node:', error);
 		}
 	}
 </script>
@@ -188,15 +244,17 @@
 		bind:nodes
 		bind:edges
 		{nodeTypes}
+		{colorMode}
 		fitView
 		fitViewOptions={{ padding: 0.2 }}
 		deleteKey={null}
-		class="bg-gray-50"
 		ondragover={handleDragOver}
 		ondrop={handleDrop}
 		onnodeclick={handleNodeClickInternal}
+		onnodedragstop={handleNodeDragStop}
 		onpaneclick={handleCanvasClickInternal}
-		onbeforeconnect={handleConnect}
+		onbeforeconnect={handleBeforeConnect}
+		onconnect={handleConnect}
 	>
 		<Background />
 		<Controls />
@@ -211,7 +269,9 @@
 	</SvelteFlow>
 
 	{#if !readonly && workflowStore.isDirty}
-		<div class="absolute bottom-4 right-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 shadow-md">
+		<div
+			class="absolute right-4 bottom-4 rounded-lg bg-blue-100 px-3 py-2 text-sm text-blue-700 shadow-md dark:bg-blue-900/50 dark:text-blue-300"
+		>
 			Saving changes...
 		</div>
 	{/if}

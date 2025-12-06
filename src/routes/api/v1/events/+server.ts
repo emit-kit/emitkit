@@ -6,7 +6,6 @@ import { withAuth } from '$lib/features/api/server/middleware';
 import { z } from 'zod';
 import { createContextLogger } from '$lib/server/logger';
 import { redis } from '$lib/server/redis';
-import { waitUntil } from '$lib/server/wait-until';
 import { resolveUserAlias } from '$lib/features/identity/server/tinybird.service';
 
 const jsonValueSchema: z.ZodType<

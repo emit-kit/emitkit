@@ -394,6 +394,31 @@ export async function getEventsAfter(
 	});
 }
 
+export async function getEventById(eventId: string): Promise<Event | null> {
+	interface TinybirdEventResponse {
+		data: Record<string, unknown>[];
+	}
+
+	const response = await tinybird.queryPipe<TinybirdEventResponse>('get_event_by_id', {
+		event_id: eventId
+	});
+
+	if (!response.data || response.data.length === 0) {
+		logger.warn('Event not found in Tinybird', { eventId });
+		return null;
+	}
+
+	const event = tinybirdToEvent(response.data[0]);
+
+	logger.info('Event fetched from Tinybird', {
+		eventId,
+		channelId: event.channelId,
+		organizationId: event.organizationId
+	});
+
+	return event;
+}
+
 export async function getEventStats(
 	orgId: string,
 	channelId?: string,

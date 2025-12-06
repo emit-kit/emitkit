@@ -50,6 +50,11 @@ class WorkflowStore {
 
 	// Initialize workflow data
 	initialize(workflowId: string, nodes: WorkflowNode[], edges: WorkflowEdge[]) {
+		console.group('[STORE] Initialize');
+		console.log('workflowId:', workflowId);
+		console.log('nodes count:', nodes.length);
+		console.log('edges count:', edges.length);
+
 		// Convert WorkflowNode to XYFlow Node format
 		const xyflowNodes: Node<WorkflowNode['data'], WorkflowNode['type']>[] = nodes.map((node) => ({
 			id: node.id,
@@ -73,18 +78,51 @@ class WorkflowStore {
 		this.state.workflowId = workflowId;
 		this.state.isDirty = false;
 		this.state.selectedNodeId = null;
+
+		console.log('Store initialized with nodes:', this.state.nodes.length);
+		console.groupEnd();
 	}
 
 	// Set nodes (called by XYFlow onNodesChange)
 	setNodes(nodes: Node<WorkflowNode['data'], WorkflowNode['type']>[]) {
-		this.state.nodes = nodes;
-		this.markDirty();
+		console.log('[STORE] setNodes called', {
+			currentCount: this.state.nodes.length,
+			newCount: nodes.length,
+			nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position }))
+		});
+
+		// Only mark as dirty AND update state if data actually changed
+		const nodesChanged = JSON.stringify(this.state.nodes) !== JSON.stringify(nodes);
+		console.log('[STORE] setNodes - changed?', nodesChanged);
+
+		if (nodesChanged) {
+			console.log('[STORE] setNodes - updating state and marking dirty');
+			this.state.nodes = nodes;
+			this.markDirty();
+		} else {
+			console.log('[STORE] setNodes - no change, skipping update');
+		}
 	}
 
 	// Set edges (called by XYFlow onEdgesChange)
 	setEdges(edges: Edge<WorkflowEdge>[]) {
-		this.state.edges = edges;
-		this.markDirty();
+		console.log('[STORE] setEdges called', {
+			currentCount: this.state.edges.length,
+			newCount: edges.length,
+			edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+		});
+
+		// Only mark as dirty AND update state if data actually changed
+		const edgesChanged = JSON.stringify(this.state.edges) !== JSON.stringify(edges);
+		console.log('[STORE] setEdges - changed?', edgesChanged);
+
+		if (edgesChanged) {
+			console.log('[STORE] setEdges - updating state and marking dirty');
+			this.state.edges = edges;
+			this.markDirty();
+		} else {
+			console.log('[STORE] setEdges - no change, skipping update');
+		}
 	}
 
 	// Add a new node
@@ -93,6 +131,7 @@ class WorkflowStore {
 		position: { x: number; y: number },
 		data: WorkflowNode['data']
 	) {
+		console.group('[STORE] addNode');
 		const newNode: Node<WorkflowNode['data'], WorkflowNode['type']> = {
 			id: `node-${Date.now()}`,
 			type,
@@ -100,8 +139,18 @@ class WorkflowStore {
 			data
 		};
 
+		console.log('New node created:', newNode);
+		console.log('Current nodes count:', this.state.nodes.length);
+
 		this.state.nodes = [...this.state.nodes, newNode];
+
+		console.log('After adding - nodes count:', this.state.nodes.length);
+		console.log('State nodes array:', this.state.nodes);
+
 		this.markDirty();
+		console.log('Marked as dirty, isDirty:', this.state.isDirty);
+		console.groupEnd();
+
 		return newNode;
 	}
 

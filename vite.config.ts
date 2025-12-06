@@ -17,8 +17,7 @@ export default defineConfig({
 		noExternal: ['@xyflow/svelte']
 	},
 	optimizeDeps: {
-		include: ['@xyflow/svelte'],
-		exclude: ['source-map-js']
+		include: ['@xyflow/svelte']
 	},
 	test: {
 		expect: { requireAssertions: true },
