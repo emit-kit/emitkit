@@ -24,13 +24,14 @@ export type {
 // Client-side workflow node type (compatible with Svelte Flow / XYFlow)
 export type WorkflowNode = {
 	id: string;
-	type: 'trigger' | 'action';
+	type: 'trigger' | 'action' | 'add';
 	position: { x: number; y: number };
 	data: {
 		label: string;
 		description?: string;
 		config: TriggerConfig | ActionConfig;
 		status?: 'idle' | 'running' | 'success' | 'error';
+		enabled?: boolean;
 	};
 	selected?: boolean;
 };

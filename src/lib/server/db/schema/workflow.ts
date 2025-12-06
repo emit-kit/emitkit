@@ -131,7 +131,7 @@ export type TriggerConfig = {
 };
 
 export type ActionConfig = {
-	actionType: ActionType;
+	actionType?: ActionType;
 	// Slack/Discord
 	webhookUrl?: string;
 	messageTemplate?: string;

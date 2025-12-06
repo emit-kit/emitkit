@@ -1,5 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { getWorkflow } from '$lib/features/workflows/server/repository';
+import { listChannels } from '$lib/features/channels/server/repository';
+import { listFoldersByOrg } from '$lib/features/folders/server/repository';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, request, params }) => {
@@ -19,8 +21,22 @@ export const load: PageServerLoad = async ({ locals, request, params }) => {
 		error(404, 'Workflow not found');
 	}
 
+	// Fetch channels and folders for trigger configuration
+	const [channelsResult, foldersResult] = await Promise.all([
+		listChannels(organizationId),
+		listFoldersByOrg(organizationId)
+	]);
+
 	return {
 		workflow,
-		organizationId
+		organizationId,
+		channels: channelsResult.items.map((c) => ({
+			id: c.id,
+			name: c.name
+		})),
+		folders: foldersResult.items.map((f) => ({
+			id: f.id,
+			name: f.name
+		}))
 	};
 };

@@ -9,6 +9,7 @@ type WorkflowState = {
 	selectedNodeId: string | null;
 	isDirty: boolean;
 	workflowId: string | null;
+	activePanelTab: 'properties' | 'runs' | 'code';
 };
 
 class WorkflowStore {
@@ -17,7 +18,8 @@ class WorkflowStore {
 		edges: [],
 		selectedNodeId: null,
 		isDirty: false,
-		workflowId: null
+		workflowId: null,
+		activePanelTab: 'properties'
 	});
 
 	private saveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -48,6 +50,14 @@ class WorkflowStore {
 		return this.state.nodes.find((n) => n.id === this.state.selectedNodeId);
 	}
 
+	get activePanelTab() {
+		return this.state.activePanelTab;
+	}
+
+	setActivePanelTab(tab: 'properties' | 'runs' | 'code') {
+		this.state.activePanelTab = tab;
+	}
+
 	// Initialize workflow data
 	initialize(workflowId: string, nodes: WorkflowNode[], edges: WorkflowEdge[]) {
 		console.group('[STORE] Initialize');
@@ -56,13 +66,31 @@ class WorkflowStore {
 		console.log('edges count:', edges.length);
 
 		// Convert WorkflowNode to XYFlow Node format
-		const xyflowNodes: Node<WorkflowNode['data'], WorkflowNode['type']>[] = nodes.map((node) => ({
+		let xyflowNodes: Node<WorkflowNode['data'], WorkflowNode['type']>[] = nodes.map((node) => ({
 			id: node.id,
 			type: node.type,
 			position: node.position,
 			data: node.data,
 			selected: node.selected
 		}));
+
+		// If workflow is empty, add a placeholder "add" node
+		// This is UI-only and won't be persisted to the database
+		if (xyflowNodes.length === 0) {
+			console.log('[STORE] Empty workflow detected, adding placeholder "add" node');
+			xyflowNodes = [
+				{
+					id: 'add-node-initial',
+					type: 'add' as const,
+					position: { x: 400, y: 300 },
+					data: {
+						label: 'Add Node',
+						description: 'Click to choose an action',
+						config: { actionType: undefined } as any
+					}
+				}
+			];
+		}
 
 		// Convert WorkflowEdge to XYFlow Edge format
 		const xyflowEdges: Edge<WorkflowEdge>[] = edges.map((edge) => ({
@@ -195,6 +223,61 @@ class WorkflowStore {
 		this.markDirty();
 	}
 
+	// Update edge type
+	updateEdgeType(edgeId: string, type: 'default' | 'straight' | 'step') {
+		this.state.edges = this.state.edges.map((edge) =>
+			edge.id === edgeId ? { ...edge, type } : edge
+		);
+		this.markDirty();
+	}
+
+	// Duplicate node
+	duplicateNode(nodeId: string) {
+		const node = this.state.nodes.find((n) => n.id === nodeId);
+		if (!node) return null;
+
+		const newNode: Node<WorkflowNode['data'], WorkflowNode['type']> = {
+			...node,
+			id: `node-${Date.now()}`,
+			position: {
+				x: node.position.x + 50,
+				y: node.position.y + 50
+			},
+			data: {
+				...node.data,
+				label: `${node.data.label} (Copy)`
+			},
+			selected: false
+		};
+
+		this.state.nodes = [...this.state.nodes, newNode];
+		this.markDirty();
+		return newNode;
+	}
+
+	// Toggle node enabled state
+	toggleNodeEnabled(nodeId: string) {
+		this.state.nodes = this.state.nodes.map((node) =>
+			node.id === nodeId
+				? {
+						...node,
+						data: {
+							...node.data,
+							enabled: node.data.enabled === false ? true : false
+						}
+					}
+				: node
+		);
+		this.markDirty();
+	}
+
+	// Clear all selections
+	clearSelection() {
+		this.state.nodes = this.state.nodes.map((node) => ({ ...node, selected: false }));
+		this.state.edges = this.state.edges.map((edge) => ({ ...edge, selected: false }));
+		this.state.selectedNodeId = null;
+	}
+
 	// Select node
 	selectNode(nodeId: string | null) {
 		this.state.selectedNodeId = nodeId;
@@ -225,13 +308,16 @@ class WorkflowStore {
 
 		try {
 			// Convert back to WorkflowNode/WorkflowEdge format for storage
-			const nodes: WorkflowNode[] = this.state.nodes.map((node) => ({
-				id: node.id,
-				type: node.type as WorkflowNode['type'],
-				position: node.position,
-				data: node.data,
-				selected: node.selected
-			}));
+			// Filter out 'add' nodes - they are UI-only placeholders
+			const nodes: WorkflowNode[] = this.state.nodes
+				.filter((node) => node.type !== 'add')
+				.map((node) => ({
+					id: node.id,
+					type: node.type as WorkflowNode['type'],
+					position: node.position,
+					data: node.data,
+					selected: node.selected
+				}));
 
 			const edges: WorkflowEdge[] = this.state.edges.map((edge) => ({
 				id: edge.id,
@@ -274,6 +360,7 @@ class WorkflowStore {
 		this.state.selectedNodeId = null;
 		this.state.isDirty = false;
 		this.state.workflowId = null;
+		this.state.activePanelTab = 'properties';
 		if (this.saveTimeout) {
 			clearTimeout(this.saveTimeout);
 		}
