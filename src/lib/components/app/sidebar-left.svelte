@@ -10,6 +10,7 @@
 	import NavFolders from './nav-folders.svelte';
 	import NavMain from './nav-main.svelte';
 	import NavSecondary from './nav-secondary.svelte';
+	import { Folder } from '@lucide/svelte';
 
 	let {
 		ref = $bindable(null),
@@ -23,6 +24,12 @@
 				title: 'Feed',
 				url: '/',
 				icon: HouseIcon,
+				isActive: true
+			},
+			{
+				title: 'Folders',
+				url: '/folders',
+				icon: Folder,
 				isActive: true
 			},
 			{

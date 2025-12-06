@@ -4,7 +4,6 @@ import { sendPushNotificationToChannels } from '$lib/features/notifications/serv
 import { listWebhooks } from '$lib/features/webhooks/server/repository';
 import { dispatchWebhooks } from '$lib/features/webhooks/server/dispatch';
 import { getIntegrationsForEvent } from '$lib/features/integrations/server/repository';
-import { matchAndExecuteWorkflows } from './trigger-matcher';
 import { createContextLogger } from '$lib/server/logger';
 
 const logger = createContextLogger('event-workflow-helpers');
@@ -142,30 +141,3 @@ export async function processIntegrations(
 	};
 }
 
-/**
- * Step 5: Execute user-configured visual workflows
- */
-export async function processVisualWorkflows(
-	event: Event
-): Promise<{ matched: number; executed: number }> {
-	logger.info('Processing visual workflows', {
-		eventId: event.id,
-		folderId: event.folderId
-	});
-
-	// This calls the existing workflow matching/execution logic
-	await matchAndExecuteWorkflows({
-		eventId: event.id,
-		channelId: event.channelId,
-		folderId: event.folderId || '',
-		organizationId: event.organizationId,
-		title: event.title,
-		description: event.description || undefined,
-		tags: event.tags || undefined,
-		metadata: event.metadata as Record<string, unknown> | undefined
-	});
-
-	logger.info('Visual workflows processed', { eventId: event.id });
-
-	return { matched: 0, executed: 0 }; // TODO: Return actual counts from matchAndExecuteWorkflows
-}

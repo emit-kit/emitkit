@@ -1,8 +1,13 @@
-import { VERCEL_URL } from '$env/static/private';
+import { siteConfig } from './site-config';
+import { createContextLogger } from './logger';
+import { workflowClient } from './upstash-workflow';
+
+const logger = createContextLogger('workflow-trigger');
 
 /**
- * Trigger a workflow by making an HTTP POST request to the workflow endpoint.
- * Returns the workflowRunId for tracking.
+ * Trigger a workflow via QStash.
+ * This properly sends the workflow trigger through QStash, which then calls
+ * the workflow endpoint with proper signatures for verification.
  *
  * @param path - Workflow endpoint path (e.g., '/api/workflows/events')
  * @param payload - Workflow payload
@@ -22,18 +27,30 @@ export async function triggerWorkflow<T>(
 	path: string,
 	payload: T
 ): Promise<{ workflowRunId: string }> {
-	const url = `${VERCEL_URL}${path}`;
+	// Remove leading slash from path to avoid double slashes in URL
+	const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+	const url = `${siteConfig.appUrl}/${cleanPath}`;
 
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(payload)
-	});
+	logger.info('Triggering workflow', { url, path: cleanPath });
 
-	if (!response.ok) {
-		const errorText = await response.text();
-		throw new Error(`Failed to trigger workflow: ${response.status} ${errorText}`);
+	try {
+		// Use Upstash Workflow Client to trigger
+		// QStash will then call our endpoint with proper signatures
+		const result = await workflowClient.trigger({
+			url,
+			body: payload
+		});
+
+		logger.info('Workflow triggered successfully', {
+			workflowRunId: result.workflowRunId
+		});
+
+		return { workflowRunId: result.workflowRunId };
+	} catch (error) {
+		logger.error('Failed to trigger workflow', error instanceof Error ? error : undefined, {
+			url,
+			error: error instanceof Error ? error.message : 'Unknown error'
+		});
+		throw error;
 	}
-
-	return response.json();
 }

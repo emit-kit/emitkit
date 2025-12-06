@@ -5,8 +5,7 @@ import {
 	fetchEventDetails,
 	processNotifications,
 	processWebhooks,
-	processIntegrations,
-	processVisualWorkflows
+	processIntegrations
 } from '$lib/features/workflows/server/event-workflow-helpers';
 
 const logger = createContextLogger('workflow-events');
@@ -100,22 +99,9 @@ export const { POST } = serve<EventWorkflowPayload>(
 			failed: integrationResult.failed
 		});
 
-		// Step 5: Execute user-configured visual workflows
-		if (payload.folderId) {
-			const workflowResult = await context.run('visual-workflows', async () => {
-				return await processVisualWorkflows(event);
-			});
-
-			logger.info('Visual workflows processed', {
-				eventId: event.id,
-				matched: workflowResult.matched,
-				executed: workflowResult.executed
-			});
-		} else {
-			logger.info('Visual workflows skipped (no folderId)', {
-				eventId: event.id
-			});
-		}
+		// Note: User-configured visual workflows are executed separately
+		// via matchAndExecuteWorkflows in createAndBroadcastEvent (fire-and-forget)
+		// This Upstash workflow focuses only on automatic, critical side effects
 
 		logger.info('Event workflow completed successfully', {
 			eventId: payload.eventId,
@@ -128,8 +114,7 @@ export const { POST } = serve<EventWorkflowPayload>(
 			results: {
 				notifications: payload.notify,
 				webhooks: webhookResult.dispatched,
-				integrations: integrationResult.executed,
-				visualWorkflows: payload.folderId ? true : false
+				integrations: integrationResult.executed
 			}
 		};
 	},

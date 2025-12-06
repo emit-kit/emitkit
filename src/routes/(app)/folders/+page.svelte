@@ -18,7 +18,7 @@
 	let { data }: PageProps = $props();
 
 	// State
-	let folders = $state(data.folders);
+	let folders = $derived(data.folders);
 	let showCreateDialog = $state(false);
 	let showApiKeyDialog = $state(false);
 	let showDeleteDialog = $state(false);

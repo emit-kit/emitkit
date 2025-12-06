@@ -6,7 +6,7 @@ import { db } from '$lib/server/db';
 
 const logger = createContextLogger('workflow-execution');
 
-type ExecutionContext = {
+export type ExecutionContext = {
 	trigger: {
 		eventId: string;
 		channelId: string;
@@ -222,7 +222,7 @@ async function executeActionNode(
 /**
  * Execute Slack action
  */
-async function executeSlackActionNode(
+export async function executeSlackActionNode(
 	node: WorkflowNodeData,
 	context: ExecutionContext
 ): Promise<{ sent: boolean }> {
@@ -264,7 +264,7 @@ async function executeSlackActionNode(
 /**
  * Execute Discord action
  */
-async function executeDiscordActionNode(
+export async function executeDiscordActionNode(
 	node: WorkflowNodeData,
 	context: ExecutionContext
 ): Promise<{ sent: boolean }> {
@@ -303,7 +303,7 @@ async function executeDiscordActionNode(
 /**
  * Execute Email action (placeholder)
  */
-async function executeEmailActionNode(
+export async function executeEmailActionNode(
 	node: WorkflowNodeData,
 	context: ExecutionContext
 ): Promise<{ sent: boolean }> {
@@ -353,7 +353,7 @@ function isInternalUrl(urlString: string): boolean {
 /**
  * Execute HTTP request action with SSRF protection
  */
-async function executeHttpActionNode(
+export async function executeHttpActionNode(
 	node: WorkflowNodeData,
 	context: ExecutionContext
 ): Promise<unknown> {
@@ -394,7 +394,7 @@ async function executeHttpActionNode(
 /**
  * Execute condition node
  */
-async function executeConditionNode(
+export async function executeConditionNode(
 	node: WorkflowNodeData,
 	context: ExecutionContext
 ): Promise<{ result: boolean }> {
@@ -411,7 +411,7 @@ async function executeConditionNode(
  * Interpolate template variables with context data
  * Supports {{trigger.eventTitle}}, {{trigger.eventDescription}}, etc.
  */
-function interpolateTemplate(template: string, context: ExecutionContext): string {
+export function interpolateTemplate(template: string, context: ExecutionContext): string {
 	return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
 		const keys = path.trim().split('.');
 		let value: any = context;
@@ -470,7 +470,7 @@ function flattenForEval(obj: Record<string, unknown>, prefix = ''): Record<strin
 /**
  * Evaluate a condition expression safely using expr-eval
  */
-function evaluateCondition(condition: string, context: ExecutionContext): boolean {
+export function evaluateCondition(condition: string, context: ExecutionContext): boolean {
 	try {
 		// Use expr-eval for safe expression evaluation
 		const parser = new Parser();

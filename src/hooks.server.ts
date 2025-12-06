@@ -177,6 +177,11 @@ const betterAuthHandler: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
+	// Skip session/org logic for Upstash Workflow callbacks (authenticated via QStash signatures)
+	if (pathname.includes('/api/workflows/') && pathname.endsWith('/execute')) {
+		return resolve(event);
+	}
+
 	// Load session
 	const session = await auth.api.getSession({ headers: event.request.headers });
 	if (session) {

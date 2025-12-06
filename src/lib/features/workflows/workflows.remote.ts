@@ -167,7 +167,10 @@ export const executeWorkflowCommand = command(executeWorkflowSchema, async (inpu
 
 		const { workflowRunId } = await workflowClient.trigger({
 			url: endpoint,
-			body: { input: input.triggerInput || {} }
+			body: {
+				organizationId: activeOrganization.id,
+				input: input.triggerInput || {}
+			}
 		});
 
 		logger.info('Workflow triggered via Upstash', {
@@ -226,27 +229,58 @@ export const listWorkflowExecutionsQuery = query(listWorkflowExecutionsSchema, a
 });
 
 // Zod schemas for Upstash API response validation
-const upstashStepSchema = z.object({
-	stepId: z.union([z.number(), z.string()]).optional(),
-	stepName: z.string(),
-	state: z.enum(['STEP_SUCCESS', 'STEP_FAILED', 'STEP_PENDING']),
-	createdAt: z.number(),
-	callResponseBody: z.string().optional()
-});
+const upstashStepSchema = z
+	.object({
+		// Required fields
+		state: z.enum(['STEP_SUCCESS', 'STEP_FAILED', 'STEP_PENDING', 'STEP_RETRY']),
 
-const upstashRunSchema = z.object({
-	workflowRunId: z.string(),
-	workflowUrl: z.string().url(),
-	workflowState: z.enum(['RUN_STARTED', 'RUN_SUCCESS', 'RUN_FAILED', 'RUN_CANCELED']),
-	workflowRunCreatedAt: z.number(),
-	workflowRunCompletedAt: z.number().optional(),
-	steps: z.array(
-		z.object({
-			type: z.enum(['sequential', 'parallel']),
-			steps: z.array(upstashStepSchema)
-		})
-	)
-});
+		// Fields that exist in normal steps but not retry steps
+		stepId: z.union([z.number(), z.string()]).optional(),
+		stepName: z.string().optional(),
+		createdAt: z.number().optional(),
+
+		// Additional fields from Upstash API
+		stepType: z.string().optional(),
+		callType: z.string().optional(),
+		messageId: z.string().optional(),
+		headers: z.record(z.string(), z.unknown()).optional(),
+		out: z.string().optional(),
+		concurrent: z.number().optional(),
+		retries: z.number().optional(),
+
+		// Response fields
+		callResponseBody: z.string().optional(),
+
+		// Error fields (for retry steps)
+		errors: z
+			.array(
+				z.object({
+					status: z.number().optional(),
+					error: z.string().optional(),
+					body: z.string().optional(),
+					time: z.number().optional(),
+					headers: z.record(z.string(), z.unknown()).optional()
+				})
+			)
+			.optional()
+	})
+	.passthrough(); // Allow extra fields we don't know about
+
+const upstashRunSchema = z
+	.object({
+		workflowRunId: z.string(),
+		workflowUrl: z.string().url(),
+		workflowState: z.enum(['RUN_STARTED', 'RUN_SUCCESS', 'RUN_FAILED', 'RUN_CANCELED']),
+		workflowRunCreatedAt: z.number(),
+		workflowRunCompletedAt: z.number().optional(),
+		steps: z.array(
+			z.object({
+				type: z.enum(['sequential', 'parallel', 'next']), // Added "next" type
+				steps: z.array(upstashStepSchema)
+			})
+		)
+	})
+	.passthrough(); // Allow extra fields
 
 // Helper: Transform Upstash run data to our execution format with validation
 function transformUpstashRunToExecution(run: unknown): WorkflowExecution {
@@ -287,18 +321,28 @@ function transformUpstashRunToExecution(run: unknown): WorkflowExecution {
 		startedAt: new Date(data.workflowRunCreatedAt),
 		completedAt: data.workflowRunCompletedAt ? new Date(data.workflowRunCompletedAt) : null,
 		error: data.workflowState === 'RUN_FAILED' ? 'Workflow execution failed' : null,
-		logs: data.steps.flatMap((step) =>
-			step.type === 'sequential'
-				? step.steps.map((s) => ({
-						nodeId: String(s.stepId ?? s.stepName),
-						nodeName: s.stepName,
+		logs: data.steps.flatMap((stepGroup) =>
+			stepGroup.steps
+				.filter((s) => s.stepName || s.state === 'STEP_RETRY') // Include retry steps
+				.map((s) => {
+					// For retry steps, extract error information
+					const errorMessage =
+						s.state === 'STEP_RETRY' && s.errors && s.errors.length > 0
+							? s.errors.map((e) => e.error || e.body || 'Unknown error').join(', ')
+							: s.state === 'STEP_FAILED'
+								? s.callResponseBody || 'Step failed'
+								: undefined;
+
+					return {
+						nodeId: String(s.stepId ?? s.stepName ?? 'retry'),
+						nodeName: s.stepName ?? 'Retry',
 						status: mapStepStatus(s.state),
-						error: s.state === 'STEP_FAILED' ? s.callResponseBody || 'Step failed' : undefined,
+						error: errorMessage,
 						output: s.callResponseBody ? tryParseJSON(s.callResponseBody) : undefined,
-						startedAt: new Date(s.createdAt).toISOString(),
-						completedAt: new Date(s.createdAt).toISOString()
-					}))
-				: []
+						startedAt: s.createdAt ? new Date(s.createdAt).toISOString() : new Date().toISOString(),
+						completedAt: s.createdAt ? new Date(s.createdAt).toISOString() : new Date().toISOString()
+					};
+				})
 		)
 	};
 }
@@ -325,6 +369,8 @@ function mapStepStatus(state: string): 'success' | 'error' | 'running' | 'pendin
 			return 'error';
 		case 'STEP_PENDING':
 			return 'pending';
+		case 'STEP_RETRY':
+			return 'running'; // Retry steps are considered running
 		default:
 			return 'pending';
 	}
