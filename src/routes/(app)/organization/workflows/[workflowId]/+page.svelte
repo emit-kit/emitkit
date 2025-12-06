@@ -3,13 +3,13 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Switch } from '$lib/components/ui/switch';
-	import * as Card from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import WorkflowCanvas from '$lib/features/workflows/components/workflow-canvas.svelte';
+	import WorkflowSidebarEmpty from '$lib/features/workflows/components/workflow-sidebar-empty.svelte';
 	import { workflowStore } from '$lib/features/workflows/stores/workflow-store.svelte';
 	import { updateWorkflowCommand, executeWorkflowCommand } from '$lib/features/workflows/workflows.remote';
 	import { goto } from '$app/navigation';
@@ -25,6 +25,8 @@
 	import type { Node } from '@xyflow/svelte';
 	import { TriggerConfig as TriggerConfigComponent, ActionConfig as ActionConfigComponent } from '$lib/features/workflows/components/config';
 	import WorkflowRuns from '$lib/features/workflows/components/workflow-runs.svelte';
+	import ActionGrid from '$lib/features/workflows/components/config/action-grid.svelte';
+	import type { ActionTemplate } from '$lib/features/workflows/action-templates';
 
 	let { data }: { data: PageData } = $props();
 
@@ -44,82 +46,8 @@
 
 	// Selected node for configuration
 	let selectedNode = $state<Node<WorkflowNode['data'], WorkflowNode['type']> | null>(null);
-	let showRightSidebar = $state(false);
-
-	// Node palette data
-	const triggerNodes = [
-		{
-			type: 'trigger' as const,
-			label: 'Folder Event',
-			description: 'Trigger on events in a folder',
-			config: { triggerType: 'folder' as const, folderId: '' }
-		},
-		{
-			type: 'trigger' as const,
-			label: 'Channel Event',
-			description: 'Trigger on events in a channel',
-			config: { triggerType: 'channel' as const, channelId: '' }
-		},
-		{
-			type: 'trigger' as const,
-			label: 'Event Type',
-			description: 'Trigger on specific event types',
-			config: { triggerType: 'event_type' as const, eventTypes: [] }
-		},
-		{
-			type: 'trigger' as const,
-			label: 'Tag Match',
-			description: 'Trigger on events with specific tags',
-			config: { triggerType: 'tag' as const, tags: [] }
-		}
-	];
-
-	const actionNodes = [
-		{
-			type: 'action' as const,
-			label: 'Send to Slack',
-			description: 'Post message to Slack channel',
-			config: { actionType: 'slack' as const, webhookUrl: '', messageTemplate: '' }
-		},
-		{
-			type: 'action' as const,
-			label: 'Send to Discord',
-			description: 'Post message to Discord channel',
-			config: { actionType: 'discord' as const, webhookUrl: '', messageTemplate: '' }
-		},
-		{
-			type: 'action' as const,
-			label: 'Send Email',
-			description: 'Send email notification',
-			config: { actionType: 'email' as const, to: '', subject: '', body: '' }
-		},
-		{
-			type: 'action' as const,
-			label: 'HTTP Request',
-			description: 'Make HTTP request to webhook',
-			config: {
-				actionType: 'http' as const,
-				httpMethod: 'POST' as const,
-				endpoint: '',
-				headers: {},
-				httpBody: ''
-			}
-		},
-		{
-			type: 'action' as const,
-			label: 'Condition',
-			description: 'Branch based on condition',
-			config: { actionType: 'condition' as const, condition: '' }
-		}
-	];
-
-	// Special node for browsing all actions (shows action grid)
-	const browseActionsNode = {
-		type: 'action' as const,
-		label: 'New Action',
-		description: 'Choose from action library',
-		config: { actionType: undefined } as ActionConfig // Empty config will trigger action grid
-	};
+	let showRightSidebar = $state(true); // Always show sidebar, will display empty state when nothing selected
+	let isAddingNode = $state(false); // Track if we're in "add node" mode
 
 	// Save workflow metadata
 	async function saveMetadata() {
@@ -155,10 +83,12 @@
 				config: { actionType: undefined } as ActionConfig
 			});
 
-			// Select the new node
+			// Select the new node and enter "add node" mode
 			selectedNode = newNode as Node<WorkflowNode['data'], WorkflowNode['type']>;
+			isAddingNode = true;
 		} else {
 			selectedNode = node;
+			isAddingNode = false;
 		}
 
 		showRightSidebar = true;
@@ -167,34 +97,34 @@
 	// Handle canvas click (deselect node)
 	function handleCanvasClick() {
 		selectedNode = null;
-		showRightSidebar = false;
+		isAddingNode = false;
+		// Keep sidebar open to show empty state
 	}
 
-	// Add node to canvas
-	function addNode(nodeTemplate: (typeof triggerNodes)[0] | (typeof actionNodes)[0] | typeof browseActionsNode) {
+	// Handle "Add Node" button click from empty state
+	function handleAddNodeFromEmpty() {
+		isAddingNode = true;
+		selectedNode = null; // Deselect any selected node
+	}
+
+	// Handle action selection from action grid
+	function handleActionSelected(template: ActionTemplate) {
 		const centerX = 400;
 		const centerY = 300;
 		const randomOffset = () => Math.floor(Math.random() * 100) - 50;
 
-		workflowStore.addNode(
-			nodeTemplate.type,
-			{ x: centerX + randomOffset(), y: centerY + randomOffset() },
-			{
-				label: nodeTemplate.label,
-				description: nodeTemplate.description,
-				config: nodeTemplate.config
-			}
-		);
-	}
+		// Add node to canvas
+		const newNode = workflowStore.addNode('action', { x: centerX + randomOffset(), y: centerY + randomOffset() }, {
+			label: template.name,
+			description: template.description,
+			config: template.config
+		});
 
-	// Handle drag start for node palette
-	function handleDragStart(
-		event: DragEvent,
-		nodeTemplate: (typeof triggerNodes)[0] | (typeof actionNodes)[0] | typeof browseActionsNode
-	) {
-		if (!event.dataTransfer) return;
-		event.dataTransfer.effectAllowed = 'move';
-		event.dataTransfer.setData('application/json', JSON.stringify(nodeTemplate));
+		// Select the new node
+		selectedNode = newNode as Node<WorkflowNode['data'], WorkflowNode['type']>;
+		isAddingNode = false;
+
+		toast.success(`Added ${template.name}`);
 	}
 
 	// Handle test workflow execution
@@ -283,84 +213,7 @@
 
 	<!-- Main Content -->
 	<div class="flex flex-1 overflow-hidden">
-		<!-- Left Sidebar - Node Palette -->
-		<div class="w-64 overflow-y-auto border-r bg-muted/30 p-4">
-			<div class="space-y-6">
-				<!-- Triggers Section -->
-				<div>
-					<h3
-						class="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-foreground/70 uppercase"
-					>
-						<PlayIcon class="h-4 w-4" />
-						Triggers
-					</h3>
-					<div class="space-y-2">
-						{#each triggerNodes as node (node.label)}
-							<Card.Root
-								class="cursor-move transition-colors hover:border-indigo-400 hover:bg-card"
-								draggable="true"
-								ondragstart={(e) => handleDragStart(e, node)}
-								onclick={() => addNode(node)}
-							>
-								<Card.Header class="p-3">
-									<Card.Title class="text-sm">{node.label}</Card.Title>
-									<Card.Description class="text-xs">
-										{node.description}
-									</Card.Description>
-								</Card.Header>
-							</Card.Root>
-						{/each}
-					</div>
-				</div>
-
-				<!-- Actions Section -->
-				<div>
-					<h3
-						class="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-foreground/70 uppercase"
-					>
-						<ZapIcon class="h-4 w-4" />
-						Actions
-					</h3>
-					<div class="space-y-2">
-						<!-- Browse All Actions - creates node with action grid -->
-						<Card.Root
-							class="cursor-move border-dashed border-purple-400/50 bg-purple-50/50 transition-colors hover:border-purple-400 hover:bg-purple-50 dark:bg-purple-950/20 dark:hover:bg-purple-950/30"
-							draggable="true"
-							ondragstart={(e) => handleDragStart(e, browseActionsNode)}
-							onclick={() => addNode(browseActionsNode)}
-						>
-							<Card.Header class="p-3">
-								<Card.Title class="flex items-center gap-2 text-sm">
-									<ZapIcon class="h-4 w-4" />
-									Browse All Actions
-								</Card.Title>
-								<Card.Description class="text-xs">
-									Search and select from action library
-								</Card.Description>
-							</Card.Header>
-						</Card.Root>
-
-						{#each actionNodes as node (node.label)}
-							<Card.Root
-								class="cursor-move transition-colors hover:border-purple-400 hover:bg-card"
-								draggable="true"
-								ondragstart={(e) => handleDragStart(e, node)}
-								onclick={() => addNode(node)}
-							>
-								<Card.Header class="p-3">
-									<Card.Title class="text-sm">{node.label}</Card.Title>
-									<Card.Description class="text-xs">
-										{node.description}
-									</Card.Description>
-								</Card.Header>
-							</Card.Root>
-						{/each}
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Canvas -->
+		<!-- Canvas (full width when sidebar closed) -->
 		<div class="flex-1">
 			<SvelteFlowProvider>
 				<WorkflowCanvas
@@ -373,127 +226,135 @@
 			</SvelteFlowProvider>
 		</div>
 
-		<!-- Right Sidebar - Node Configuration -->
-		{#if showRightSidebar && selectedNode}
-			<div class="w-80 overflow-y-auto border-l bg-card">
-				<Tabs.Root
-					value={workflowStore.activePanelTab}
-					onValueChange={(value) => {
-						if (value) {
-							workflowStore.setActivePanelTab(value as 'properties' | 'runs' | 'code');
-						}
-					}}
-					class="h-full"
-				>
-					<div class="border-b px-4 py-3">
-						<div class="mb-3 flex items-center gap-2">
-							<SettingsIcon class="h-5 w-5 text-muted-foreground" />
-							<h3 class="text-lg font-semibold">Node Configuration</h3>
+		<!-- Right Sidebar -->
+		{#if showRightSidebar}
+			<div class="w-96 overflow-y-auto border-l bg-card">
+				{#if isAddingNode}
+					<!-- Action Grid for adding new nodes -->
+					<ActionGrid onSelect={handleActionSelected} />
+				{:else if selectedNode}
+					<!-- Node Configuration (existing tabs) -->
+					<Tabs.Root
+						value={workflowStore.activePanelTab}
+						onValueChange={(value) => {
+							if (value) {
+								workflowStore.setActivePanelTab(value as 'properties' | 'runs' | 'code');
+							}
+						}}
+						class="h-full"
+					>
+						<div class="border-b px-4 py-3">
+							<div class="mb-3 flex items-center gap-2">
+								<SettingsIcon class="h-5 w-5 text-muted-foreground" />
+								<h3 class="text-lg font-semibold">Node Configuration</h3>
+							</div>
+							<Tabs.List class="grid w-full grid-cols-3">
+								<Tabs.Trigger value="properties">Properties</Tabs.Trigger>
+								<Tabs.Trigger value="runs">Runs</Tabs.Trigger>
+								<Tabs.Trigger value="code">Code</Tabs.Trigger>
+							</Tabs.List>
 						</div>
-						<Tabs.List class="grid w-full grid-cols-3">
-							<Tabs.Trigger value="properties">Properties</Tabs.Trigger>
-							<Tabs.Trigger value="runs">Runs</Tabs.Trigger>
-							<Tabs.Trigger value="code">Code</Tabs.Trigger>
-						</Tabs.List>
-					</div>
 
-					<Tabs.Content value="properties" class="p-4">
-						<div class="space-y-4">
+						<Tabs.Content value="properties" class="p-4">
+							<div class="space-y-4">
+								<div>
+								<Label for="node-label">Label</Label>
+								<Input
+									id="node-label"
+									value={selectedNode.data.label}
+									onchange={(e) => {
+										if (selectedNode) {
+											workflowStore.updateNode(selectedNode.id, {
+												label: e.currentTarget.value
+											});
+										}
+									}}
+								/>
+							</div>
+
 							<div>
-							<Label for="node-label">Label</Label>
-							<Input
-								id="node-label"
-								value={selectedNode.data.label}
-								onchange={(e) => {
-									if (selectedNode) {
-										workflowStore.updateNode(selectedNode.id, {
-											label: e.currentTarget.value
-										});
-									}
-								}}
-							/>
-						</div>
+								<Label for="node-description">Description</Label>
+								<Textarea
+									id="node-description"
+									value={selectedNode.data.description || ''}
+									onchange={(e) => {
+										if (selectedNode) {
+											workflowStore.updateNode(selectedNode.id, {
+												description: e.currentTarget.value
+											});
+										}
+									}}
+								/>
+							</div>
 
-						<div>
-							<Label for="node-description">Description</Label>
-							<Textarea
-								id="node-description"
-								value={selectedNode.data.description || ''}
-								onchange={(e) => {
-									if (selectedNode) {
-										workflowStore.updateNode(selectedNode.id, {
-											description: e.currentTarget.value
-										});
-									}
-								}}
-							/>
-						</div>
+							<Separator />
 
-						<Separator />
+							<!-- Node-specific config -->
+							{#if selectedNode.type === 'trigger'}
+								<TriggerConfigComponent
+									config={selectedNode.data.config as TriggerConfig}
+									onUpdate={(update: Partial<TriggerConfig>, label?: string) => {
+										if (selectedNode) {
+											workflowStore.updateNode(selectedNode.id, {
+												config: { ...selectedNode.data.config, ...update },
+												...(label ? { label } : {})
+											});
+										}
+									}}
+									channels={data.channels || []}
+									folders={data.folders || []}
+								/>
+							{:else if selectedNode.type === 'action'}
+								<ActionConfigComponent
+									config={selectedNode.data.config as ActionConfig}
+									onUpdate={(update: Partial<ActionConfig>, label?: string) => {
+										if (selectedNode) {
+											workflowStore.updateNode(selectedNode.id, {
+												config: { ...selectedNode.data.config, ...update },
+												...(label ? { label } : {})
+											});
+										}
+									}}
+								/>
+							{/if}
 
-						<!-- Node-specific config -->
-						{#if selectedNode.type === 'trigger'}
-							<TriggerConfigComponent
-								config={selectedNode.data.config as TriggerConfig}
-								onUpdate={(update: Partial<TriggerConfig>, label?: string) => {
-									if (selectedNode) {
-										workflowStore.updateNode(selectedNode.id, {
-											config: { ...selectedNode.data.config, ...update },
-											...(label ? { label } : {})
-										});
-									}
-								}}
-								channels={data.channels || []}
-								folders={data.folders || []}
-							/>
-						{:else if selectedNode.type === 'action'}
-							<ActionConfigComponent
-								config={selectedNode.data.config as ActionConfig}
-								onUpdate={(update: Partial<ActionConfig>, label?: string) => {
-									if (selectedNode) {
-										workflowStore.updateNode(selectedNode.id, {
-											config: { ...selectedNode.data.config, ...update },
-											...(label ? { label } : {})
-										});
-									}
-								}}
-							/>
-						{/if}
+							<Separator />
 
-						<Separator />
+								<Button
+									variant="destructive"
+									size="sm"
+									class="w-full"
+									onclick={() => {
+										if (selectedNode) {
+											workflowStore.deleteNode(selectedNode.id);
+											selectedNode = null;
+										}
+									}}
+								>
+									Delete Node
+								</Button>
+							</div>
+						</Tabs.Content>
 
-							<Button
-								variant="destructive"
-								size="sm"
-								class="w-full"
-								onclick={() => {
-									if (selectedNode) {
-										workflowStore.deleteNode(selectedNode.id);
-										selectedNode = null;
-										showRightSidebar = false;
-									}
-								}}
-							>
-								Delete Node
-							</Button>
-						</div>
-					</Tabs.Content>
+						<!-- Runs Tab -->
+						<Tabs.Content value="runs" class="p-4">
+							<WorkflowRuns workflowId={data.workflow.id} nodeId={selectedNode.id} />
+						</Tabs.Content>
 
-					<!-- Runs Tab -->
-					<Tabs.Content value="runs" class="p-4">
-						<WorkflowRuns workflowId={data.workflow.id} nodeId={selectedNode.id} />
-					</Tabs.Content>
-
-					<!-- Code Tab -->
-					<Tabs.Content value="code" class="p-4">
-						<div class="space-y-4">
-							<p class="text-sm text-muted-foreground">
-								Generated code for this node will be displayed here.
-							</p>
-							<!-- Code generation will go here -->
-						</div>
-					</Tabs.Content>
-				</Tabs.Root>
+						<!-- Code Tab -->
+						<Tabs.Content value="code" class="p-4">
+							<div class="space-y-4">
+								<p class="text-sm text-muted-foreground">
+									Generated code for this node will be displayed here.
+								</p>
+								<!-- Code generation will go here -->
+							</div>
+						</Tabs.Content>
+					</Tabs.Root>
+				{:else}
+					<!-- Empty State -->
+					<WorkflowSidebarEmpty onAddNode={handleAddNodeFromEmpty} />
+				{/if}
 			</div>
 		{/if}
 	</div>

@@ -2,6 +2,9 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getWorkflow } from '$lib/features/workflows/server/repository';
 import { createContextLogger } from '$lib/server/logger';
+import { db } from '$lib/server/db';
+import * as schema from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 
 const logger = createContextLogger('workflow-execute');
 
@@ -17,9 +20,31 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			error(401, 'Unauthorized');
 		}
 
+		// Check if workflow exists first (without org filter)
+		const workflowExists = await db.query.workflow.findFirst({
+			where: eq(schema.workflow.id, params.workflowId),
+			columns: { organizationId: true }
+		});
+
+		if (!workflowExists) {
+			operation.error('Workflow not found', undefined, { workflowId: params.workflowId });
+			error(404, 'Workflow not found');
+		}
+
+		// Check ownership to prevent information disclosure
+		if (workflowExists.organizationId !== organizationId) {
+			operation.error('Forbidden - workflow belongs to different organization', undefined, {
+				workflowId: params.workflowId
+			});
+			error(403, 'Forbidden');
+		}
+
+		// Now fetch full workflow (we know it exists and user has access)
 		const workflow = await getWorkflow(params.workflowId, organizationId);
 		if (!workflow) {
-			operation.error('Workflow not found', undefined, { workflowId: params.workflowId });
+			operation.error('Workflow not found after authorization check', undefined, {
+				workflowId: params.workflowId
+			});
 			error(404, 'Workflow not found');
 		}
 

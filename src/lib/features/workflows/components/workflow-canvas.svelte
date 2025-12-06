@@ -69,24 +69,17 @@
 	let nodes = $state.raw<Node<WorkflowNode['data'], WorkflowNode['type']>[]>(initialXYFlowNodes);
 	let edges = $state.raw<Edge<WorkflowEdge>[]>(initialXYFlowEdges);
 
-	$inspect('[CANVAS] Initialized with:', {
-		workflowId,
-		nodes: nodes.length,
-		edges: edges.length
-	});
-
 	// Initialize store with the same data
 	$effect(() => {
+		// Reset first to clear previous workflow data
+		workflowStore.reset();
+
+		// Now initialize with new workflow
 		workflowStore.initialize(workflowId, initialNodes, initialEdges);
 
 		// Sync canvas with store after initialization (e.g., if store added placeholder "add" node)
 		nodes = [...workflowStore.nodes];
 		edges = [...workflowStore.edges];
-
-		// Cleanup on unmount
-		return () => {
-			workflowStore.reset();
-		};
 	});
 
 	// Get current color mode for dark mode support
@@ -116,13 +109,12 @@
 
 		// Prevent connecting to a trigger node
 		if (targetNode.type === 'trigger') {
-			console.warn('Cannot connect to a trigger node');
+			toast.warning('Cannot connect to a trigger node');
 			return false;
 		}
 
 		// Prevent connecting to or from an add node
 		if (sourceNode.type === 'add' || targetNode.type === 'add') {
-			console.warn('Cannot connect to an add node - click it to choose an action first');
 			toast.info('Click the add node to choose an action first');
 			return false;
 		}
@@ -133,12 +125,6 @@
 
 	// Handle successful connection - this is called AFTER the edge is added to the edges array
 	function handleConnect(connection: Connection) {
-		console.log('[CONNECT] Connection made:', {
-			source: connection.source,
-			target: connection.target,
-			totalEdges: edges.length
-		});
-
 		// The edge has been added to the edges array by Svelte Flow
 		// Now explicitly sync to the store to ensure it's saved
 		workflowStore.setEdges(edges);
@@ -146,7 +132,6 @@
 
 	// Handle node drag stop - sync position changes to store
 	function handleNodeDragStop() {
-		console.log('[NODE DRAG STOP] Syncing node positions to store');
 		workflowStore.setNodes(nodes);
 	}
 
@@ -184,7 +169,6 @@
 
 			// Manually sync canvas after deletion
 			if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-				console.log('[DELETE] Manually syncing canvas after deletion');
 				nodes = [...workflowStore.nodes];
 				edges = [...workflowStore.edges];
 				if (selectedNodes.length > 0) {
@@ -396,23 +380,12 @@
 	const handleConnectStart: OnConnectStart = (event, params) => {
 		if (readonly) return;
 
-		console.log('[CONNECT START]', {
-			nodeId: params.nodeId,
-			handleType: params.handleType
-		});
-
 		connectingNodeId = params.nodeId;
 		connectingHandleType = params.handleType;
 	};
 
 	// Handle connection drag end - auto-create node if dropped on empty canvas
 	const handleConnectEnd: OnConnectEnd = (event) => {
-		console.log('[CONNECT END]', {
-			connectingNodeId,
-			connectingHandleType,
-			target: event.target
-		});
-
 		if (!connectingNodeId || !connectingHandleType) {
 			connectingNodeId = null;
 			connectingHandleType = null;
@@ -424,18 +397,12 @@
 			const target = event.target as Element;
 			const targetIsPane = target.classList.contains('svelte-flow__pane');
 
-			console.log('[CONNECT END] Target analysis:', {
-				targetIsPane,
-				targetClasses: target.className
-			});
-
 			if (targetIsPane) {
 				// Get cursor position in flow coordinates
 				const clientX = 'clientX' in event ? event.clientX : event.touches?.[0]?.clientX;
 				const clientY = 'clientY' in event ? event.clientY : event.touches?.[0]?.clientY;
 
 				if (clientX === undefined || clientY === undefined) {
-					console.warn('[CONNECT END] Could not get cursor position');
 					return;
 				}
 
@@ -444,8 +411,6 @@
 					y: clientY
 				});
 
-				console.log('[CONNECT END] Creating new node at position:', position);
-
 				// Validate position is within reasonable bounds
 				if (
 					position.x < -10000 ||
@@ -453,7 +418,6 @@
 					position.x > 10000 ||
 					position.y > 10000
 				) {
-					console.warn('[CONNECT END] Invalid position for new node:', position);
 					return;
 				}
 
@@ -474,8 +438,6 @@
 					config: defaultConfig
 				});
 
-				console.log('[CONNECT END] New node created:', newNode.id);
-
 				// Auto-connect based on which handle was dragged
 				if (connectingHandleType === 'source') {
 					// User dragged FROM a node TO empty space
@@ -485,7 +447,6 @@
 						sourceHandle: null,
 						targetHandle: null
 					});
-					console.log('[CONNECT END] Connected:', connectingNodeId, '->', newNode.id);
 				} else {
 					// User dragged TO a node FROM empty space (reverse)
 					workflowStore.addEdge({
@@ -494,7 +455,6 @@
 						sourceHandle: null,
 						targetHandle: null
 					});
-					console.log('[CONNECT END] Connected:', newNode.id, '->', connectingNodeId);
 				}
 
 				// Manually sync canvas with store since we're using $state.raw()
@@ -508,7 +468,6 @@
 				toast.success('Action added and connected');
 			}
 		} catch (error) {
-			console.error('[CONNECT END] Failed to create auto-connected node:', error);
 			toast.error('Failed to add node');
 		} finally {
 			// Reset connection state
@@ -540,35 +499,18 @@
 				y: event.clientY
 			});
 
-			console.log('[DROP] Adding node:', {
-				type: nodeData.type,
-				label: nodeData.label,
-				position
-			});
-
 			// Add the node to the workflow store
-			const newNode = workflowStore.addNode(nodeData.type, position, {
+			workflowStore.addNode(nodeData.type, position, {
 				label: nodeData.label,
 				description: nodeData.description,
 				config: nodeData.config
 			});
 
-			console.log('[DROP] Node added to store:', {
-				id: newNode.id,
-				storeNodesCount: workflowStore.nodes.length
-			});
-
 			// Manually sync canvas with store since we're using $state.raw()
-			console.log('[DROP] Manually syncing canvas with store');
 			nodes = [...workflowStore.nodes];
 			edges = [...workflowStore.edges];
-
-			console.log('[DROP] Canvas updated:', {
-				canvasNodesCount: nodes.length,
-				canvasEdgesCount: edges.length
-			});
 		} catch (error) {
-			console.error('[DROP] Failed to drop node:', error);
+			toast.error('Failed to add node');
 		}
 	}
 </script>

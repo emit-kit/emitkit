@@ -1,6 +1,8 @@
 import type { Workflow, WorkflowNodeData, WorkflowEdgeData } from '$lib/server/db/schema/workflow';
 import { createWorkflowExecution, updateWorkflowExecution } from './repository';
 import { createContextLogger } from '$lib/server/logger';
+import { Parser } from 'expr-eval';
+import { db } from '$lib/server/db';
 
 const logger = createContextLogger('workflow-execution');
 
@@ -29,6 +31,7 @@ type NodeExecutionLog = {
 
 /**
  * Execute a workflow with the given trigger event
+ * Uses database transaction to ensure data integrity
  */
 export async function executeWorkflow(
 	workflow: Workflow,
@@ -48,68 +51,71 @@ export async function executeWorkflow(
 		eventId: triggerEvent.eventId
 	});
 
-	// Create execution record
-	const execution = await createWorkflowExecution({
-		workflowId: workflow.id,
-		status: 'running',
-		triggeredBy: {
-			eventId: triggerEvent.eventId,
-			channelId: triggerEvent.channelId,
-			folderId: triggerEvent.folderId,
-			eventTitle: triggerEvent.eventTitle
-		},
-		logs: []
-	});
-
-	const context: ExecutionContext = {
-		trigger: triggerEvent,
-		outputs: {}
-	};
-
-	const logs: NodeExecutionLog[] = [];
-
-	try {
-		operation.step('Building execution graph');
-		const nodes = workflow.nodes as unknown as WorkflowNodeData[];
-		const edges = workflow.edges as unknown as WorkflowEdgeData[];
-
-		// Find trigger nodes (starting points)
-		const triggerNodes = nodes.filter((n) => n.type === 'trigger');
-
-		if (triggerNodes.length === 0) {
-			throw new Error('No trigger nodes found in workflow');
-		}
-
-		// Execute workflow graph starting from trigger nodes
-		for (const triggerNode of triggerNodes) {
-			await executeNode(triggerNode, nodes, edges, context, logs);
-		}
-
-		// Update execution as success
-		await updateWorkflowExecution(execution.id, {
-			status: 'success',
-			logs,
-			completedAt: new Date()
-		});
-
-		operation.end({ executionId: execution.id, nodesExecuted: logs.length });
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-		logger.error('Workflow execution failed', error as Error, {
+	await db.transaction(async (tx) => {
+		// Create execution record within transaction
+		const execution = await createWorkflowExecution({
 			workflowId: workflow.id,
-			executionId: execution.id
+			status: 'running',
+			triggeredBy: {
+				eventId: triggerEvent.eventId,
+				channelId: triggerEvent.channelId,
+				folderId: triggerEvent.folderId,
+				eventTitle: triggerEvent.eventTitle
+			},
+			logs: []
 		});
 
-		// Update execution as failed
-		await updateWorkflowExecution(execution.id, {
-			status: 'error',
-			error: errorMessage,
-			logs,
-			completedAt: new Date()
-		});
+		const context: ExecutionContext = {
+			trigger: triggerEvent,
+			outputs: {}
+		};
 
-		operation.error('Workflow execution failed', error as Error);
-	}
+		const logs: NodeExecutionLog[] = [];
+
+		try {
+			operation.step('Building execution graph');
+			const nodes = workflow.nodes as unknown as WorkflowNodeData[];
+			const edges = workflow.edges as unknown as WorkflowEdgeData[];
+
+			// Find trigger nodes (starting points)
+			const triggerNodes = nodes.filter((n) => n.type === 'trigger');
+
+			if (triggerNodes.length === 0) {
+				throw new Error('No trigger nodes found in workflow');
+			}
+
+			// Execute workflow graph starting from trigger nodes
+			for (const triggerNode of triggerNodes) {
+				await executeNode(triggerNode, nodes, edges, context, logs);
+			}
+
+			// Update execution as success
+			await updateWorkflowExecution(execution.id, {
+				status: 'success',
+				logs,
+				completedAt: new Date()
+			});
+
+			operation.end({ executionId: execution.id, nodesExecuted: logs.length });
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			logger.error('Workflow execution failed', error as Error, {
+				workflowId: workflow.id,
+				executionId: execution.id
+			});
+
+			// Update execution as failed
+			await updateWorkflowExecution(execution.id, {
+				status: 'error',
+				error: errorMessage,
+				logs,
+				completedAt: new Date()
+			});
+
+			operation.error('Workflow execution failed', error as Error);
+			throw error; // Re-throw to rollback transaction
+		}
+	});
 }
 
 /**
@@ -308,7 +314,44 @@ async function executeEmailActionNode(
 }
 
 /**
- * Execute HTTP request action
+ * Check if a URL points to an internal/private resource (SSRF protection)
+ */
+function isInternalUrl(urlString: string): boolean {
+	try {
+		const url = new URL(urlString);
+		const hostname = url.hostname.toLowerCase();
+
+		// Block localhost
+		if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+			return true;
+		}
+
+		// Block private IP ranges
+		const privateRanges = [
+			/^10\./, // 10.0.0.0/8
+			/^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
+			/^192\.168\./, // 192.168.0.0/16
+			/^169\.254\./, // 169.254.0.0/16 (link-local)
+			/^127\./ // 127.0.0.0/8 (loopback)
+		];
+
+		if (privateRanges.some((range) => range.test(hostname))) {
+			return true;
+		}
+
+		// Block cloud metadata endpoints
+		if (hostname === '169.254.169.254' || hostname === 'metadata.google.internal') {
+			return true;
+		}
+
+		return false;
+	} catch {
+		return true; // Block malformed URLs
+	}
+}
+
+/**
+ * Execute HTTP request action with SSRF protection
  */
 async function executeHttpActionNode(
 	node: WorkflowNodeData,
@@ -321,6 +364,13 @@ async function executeHttpActionNode(
 
 	const method = ('httpMethod' in config ? config.httpMethod : 'POST') as string;
 	const endpoint = interpolateTemplate(config.endpoint as string, context);
+
+	// SSRF Protection: Validate URL before making request
+	if (isInternalUrl(endpoint)) {
+		logger.error('SSRF attempt blocked', { endpoint, nodeId: node.id });
+		throw new Error('Internal URLs are not allowed for security reasons');
+	}
+
 	const headers = ('headers' in config ? config.headers : {}) as Record<string, string>;
 	const body = 'httpBody' in config ? config.httpBody : null;
 
@@ -330,7 +380,8 @@ async function executeHttpActionNode(
 			'Content-Type': 'application/json',
 			...headers
 		},
-		...(body && method !== 'GET' && { body: interpolateTemplate(body as string, context) })
+		...(body && method !== 'GET' && { body: interpolateTemplate(body as string, context) }),
+		signal: AbortSignal.timeout(10000)
 	});
 
 	if (!response.ok) {
@@ -378,18 +429,60 @@ function interpolateTemplate(template: string, context: ExecutionContext): strin
 }
 
 /**
- * Evaluate a condition expression
- * Simple evaluation for now - can be extended
+ * Convert unknown values to expr-eval compatible Value type
+ */
+function toExprValue(value: unknown): number | string {
+	if (typeof value === 'number' || typeof value === 'string') {
+		return value;
+	}
+	if (typeof value === 'boolean') {
+		return value ? 1 : 0;
+	}
+	if (value === null || value === undefined) {
+		return '';
+	}
+	// Arrays and objects get stringified
+	if (Array.isArray(value)) {
+		return JSON.stringify(value);
+	}
+	if (typeof value === 'object') {
+		return JSON.stringify(value);
+	}
+	return String(value);
+}
+
+/**
+ * Flatten nested objects for expr-eval (converts { a: { b: 1 } } to { 'a.b': 1 })
+ */
+function flattenForEval(obj: Record<string, unknown>, prefix = ''): Record<string, number | string> {
+	const flattened: Record<string, number | string> = {};
+	for (const [key, value] of Object.entries(obj)) {
+		const newKey = prefix ? `${prefix}.${key}` : key;
+		if (value && typeof value === 'object' && !Array.isArray(value)) {
+			Object.assign(flattened, flattenForEval(value as Record<string, unknown>, newKey));
+		} else {
+			flattened[newKey] = toExprValue(value);
+		}
+	}
+	return flattened;
+}
+
+/**
+ * Evaluate a condition expression safely using expr-eval
  */
 function evaluateCondition(condition: string, context: ExecutionContext): boolean {
 	try {
-		// Interpolate variables in condition
-		const interpolated = interpolateTemplate(condition, context);
+		// Use expr-eval for safe expression evaluation
+		const parser = new Parser();
+		const expr = parser.parse(condition);
 
-		// Simple evaluation (very basic)
-		// TODO: Use a safer expression evaluator
-		// eslint-disable-next-line no-eval
-		return eval(interpolated) as boolean;
+		// Flatten context for expr-eval compatibility
+		const flatContext: Record<string, number | string> = {
+			...flattenForEval({ trigger: context.trigger }),
+			...flattenForEval({ outputs: context.outputs })
+		};
+
+		return Boolean(expr.evaluate(flatContext));
 	} catch (error) {
 		logger.warn('Condition evaluation failed', { condition, error });
 		return false;

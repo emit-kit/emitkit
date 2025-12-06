@@ -225,28 +225,72 @@ export const listWorkflowExecutionsQuery = query(listWorkflowExecutionsSchema, a
 	}
 });
 
-// Helper: Transform Upstash run data to our execution format
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformUpstashRunToExecution(run: any): WorkflowExecution {
+// Zod schemas for Upstash API response validation
+const upstashStepSchema = z.object({
+	stepId: z.union([z.number(), z.string()]).optional(),
+	stepName: z.string(),
+	state: z.enum(['STEP_SUCCESS', 'STEP_FAILED', 'STEP_PENDING']),
+	createdAt: z.number(),
+	callResponseBody: z.string().optional()
+});
+
+const upstashRunSchema = z.object({
+	workflowRunId: z.string(),
+	workflowUrl: z.string().url(),
+	workflowState: z.enum(['RUN_STARTED', 'RUN_SUCCESS', 'RUN_FAILED', 'RUN_CANCELED']),
+	workflowRunCreatedAt: z.number(),
+	workflowRunCompletedAt: z.number().optional(),
+	steps: z.array(
+		z.object({
+			type: z.enum(['sequential', 'parallel']),
+			steps: z.array(upstashStepSchema)
+		})
+	)
+});
+
+// Helper: Transform Upstash run data to our execution format with validation
+function transformUpstashRunToExecution(run: unknown): WorkflowExecution {
+	const validatedRun = upstashRunSchema.safeParse(run);
+
+	if (!validatedRun.success) {
+		logger.error('Invalid Upstash run data', validatedRun.error, { run });
+		// Return safe fallback instead of crashing
+		return {
+			id: 'invalid',
+			workflowId: 'unknown',
+			status: 'error',
+			error: 'Invalid execution data from Upstash',
+			triggeredBy: {
+				eventId: 'unknown',
+				channelId: 'unknown',
+				folderId: 'unknown',
+				eventTitle: 'Unknown'
+			},
+			startedAt: new Date(),
+			completedAt: null,
+			logs: []
+		};
+	}
+
+	const data = validatedRun.data;
+
 	return {
-		id: run.workflowRunId,
-		workflowId: extractWorkflowIdFromUrl(run.workflowUrl),
-		status: mapUpstashStatus(run.workflowState),
+		id: data.workflowRunId,
+		workflowId: extractWorkflowIdFromUrl(data.workflowUrl),
+		status: mapUpstashStatus(data.workflowState),
 		triggeredBy: {
 			eventId: 'manual',
 			channelId: 'manual',
 			folderId: 'manual',
 			eventTitle: 'Manual execution'
 		},
-		startedAt: new Date(run.workflowRunCreatedAt),
-		completedAt: run.workflowRunCompletedAt ? new Date(run.workflowRunCompletedAt) : null,
-		error: run.workflowState === 'RUN_FAILED' ? 'Workflow execution failed' : null,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		logs: (run.steps || []).flatMap((step: any) =>
+		startedAt: new Date(data.workflowRunCreatedAt),
+		completedAt: data.workflowRunCompletedAt ? new Date(data.workflowRunCompletedAt) : null,
+		error: data.workflowState === 'RUN_FAILED' ? 'Workflow execution failed' : null,
+		logs: data.steps.flatMap((step) =>
 			step.type === 'sequential'
-				? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-					step.steps.map((s: any) => ({
-						nodeId: s.stepId?.toString() || s.stepName,
+				? step.steps.map((s) => ({
+						nodeId: String(s.stepId ?? s.stepName),
 						nodeName: s.stepName,
 						status: mapStepStatus(s.state),
 						error: s.state === 'STEP_FAILED' ? s.callResponseBody || 'Step failed' : undefined,
